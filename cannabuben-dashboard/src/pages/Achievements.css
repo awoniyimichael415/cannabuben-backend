@@ -1,0 +1,93 @@
+/* 🌿 CannaBuben Achievements Page */
+.achievements-page {
+  padding: 2rem;
+  color: #1f3d2c;
+  text-align: center;
+  background-color: #faf6ec;
+  min-height: 100vh;
+}
+
+.achievements-page h1 {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.achievements-page p {
+  color: #555;
+  margin-bottom: 2rem;
+}
+
+.badges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2rem;
+  justify-items: center;
+}
+
+/* 🏅 Badge base */
+.badge {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+.badge span {
+  position: absolute;
+  bottom: -2.5rem;
+  width: 100%;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* 🥇 Gold */
+.badge.gold {
+  background: radial-gradient(circle at 30% 30%, #ffe99c, #dbaf3e);
+  border: 4px solid #c28c28;
+}
+
+/* 🥈 Silver */
+.badge.silver {
+  background: radial-gradient(circle at 30% 30%, #f0f0f0, #bcbcbc);
+  border: 4px solid #9e9e9e;
+}
+
+/* 🥉 Bronze */
+.badge.bronze {
+  background: radial-gradient(circle at 30% 30%, #f2c49b, #a76b3c);
+  border: 4px solid #88512e;
+}
+
+/* Medal inner shine */
+.badge .medal {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), transparent 60%);
+}
+
+/* Hover effects */
+.badge:hover {
+  transform: scale(1.08);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+}
+
+/* 📱 Responsive */
+@media (max-width: 600px) {
+  .badge {
+    width: 150px;
+    height: 150px;
+  }
+
+  .badge span {
+    bottom: -2rem;
+    font-size: 0.9rem;
+  }
+}

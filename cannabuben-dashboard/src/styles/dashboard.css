@@ -1,0 +1,435 @@
+:root {
+  --leaf-green: #2e5632;
+  --coin-gold: #dbaf3e;
+  --cream: #faf6ec;
+  --dark-text: #1e1e1e;
+  --mid-green: #2e7d32;
+}
+
+/* ===== Page Layout ===== */
+.cb-root {
+  display: flex;
+  min-height: 100vh;
+  background: var(--cream);
+  color: var(--dark-text);
+  font-family: "Poppins", system-ui, -apple-system, sans-serif;
+}
+
+/* ===== Sidebar ===== */
+.cb-sidebar {
+  width: 200px;
+  background: var(--leaf-green);
+  color: var(--cream);
+  padding: 28px 18px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.cb-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.cb-leaf {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--coin-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.06);
+}
+
+.cb-title {
+  font-weight: 700;
+  color: #fff;
+  font-size: 18px;
+  letter-spacing: 0.3px;
+}
+
+.cb-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.cb-nav button {
+  background: transparent;
+  border: none;
+  color: #e2e9e0;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cb-nav button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--coin-gold);
+}
+
+/* ===== Main ===== */
+.cb-main {
+  flex: 1;
+  padding: 28px;
+  overflow-y: auto;
+  margin-left: 240px; /* offset for fixed sidebar */
+}
+
+/* ===== Header ===== */
+.cb-header {
+  margin-bottom: 20px;
+}
+
+.cb-header h1 {
+  color: var(--leaf-green);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.cb-header p {
+  color: #4a4a4a;
+  margin-top: 4px;
+}
+
+/* ===== Top Section ===== */
+.cb-top-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.cb-points-card {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  background: #fff;
+  padding: 18px 22px;
+  border-radius: 16px;
+  flex: 1;
+  box-shadow: 0 6px 20px rgba(8, 20, 12, 0.06);
+}
+
+.cb-points-icon {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--coin-gold), #b9912e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cb-points-title {
+  font-weight: 700;
+  color: var(--leaf-green);
+  font-size: 18px;
+}
+
+.cb-points-value {
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--leaf-green);
+  margin-top: 6px;
+}
+
+.cb-points-sub {
+  color: #6b6b6b;
+  margin-top: 6px;
+}
+
+/* ===== Play & Win Box ===== */
+.cb-play-box {
+  background: #fff;
+  padding: 20px;
+  border-radius: 16px;
+  flex: 0 0 360px;
+  box-shadow: 0 6px 20px rgba(8, 20, 12, 0.06);
+}
+
+.cb-play-header {
+  font-weight: 800;
+  color: var(--leaf-green);
+  margin-bottom: 12px;
+  font-size: 18px;
+}
+
+.cb-play-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cb-action {
+  background: linear-gradient(180deg, #f3fff6, #e9f7ea);
+  border-radius: 12px;
+  padding: 14px;
+  border: 2px solid #dbeedb;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.cb-action:hover {
+  transform: scale(1.03);
+}
+
+.cb-action-img {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+.cb-action-title {
+  font-weight: 700;
+  color: var(--dark-text);
+  margin-bottom: 8px;
+}
+
+.cb-action-btn {
+  background: var(--coin-gold);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  transition: all 0.2s ease;
+}
+
+.cb-action-btn:hover {
+  background: #b9912e;
+}
+
+/* ===== Game Area ===== */
+.cb-games-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.cb-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(8, 20, 12, 0.05);
+  padding: 20px;
+}
+
+.card h3 {
+  color: var(--leaf-green);
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.check-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.check-row input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.check-row button {
+  background: var(--coin-gold);
+  border: none;
+  color: #fff;
+  font-weight: 700;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* ===== Achievements Section ===== */
+.cb-achievements {
+  background: #fff;
+  padding: 22px;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(8, 20, 12, 0.05);
+  flex: 0 0 350px;
+}
+
+.cb-achievements h3 {
+  color: var(--leaf-green);
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+.cards-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.card-thumb {
+  flex: 1 1 calc(33.333% - 12px);
+  background: linear-gradient(180deg, #fff, #faf7ef);
+  border-radius: 10px;
+  padding: 12px;
+  border: 2px solid #eae1b8;
+  text-align: center;
+  font-weight: 700;
+  color: var(--leaf-green);
+  transition: all 0.2s ease;
+}
+
+.card-thumb:hover {
+  border-color: var(--coin-gold);
+  transform: translateY(-4px);
+}
+
+.muted {
+  color: #aaa;
+  font-size: 14px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1020px) {
+  .cb-top-row {
+    flex-direction: column;
+  }
+  .cb-games-grid {
+    flex-direction: column;
+  }
+  .cb-achievements {
+    width: 100%;
+  }
+}
+
+/* ===== Spacing between My Points and Check Your Coins ===== */
+.cb-points-card + .card-check {
+  margin-top: 20px; /* create clean 20px gap only between these two cards */
+}
+
+
+
+/* --- Daily Spin Wheel Styling --- */
+.spin-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: transparent;
+  font-family: "Poppins", sans-serif;
+}
+
+.wheel-wrapper {
+  position: relative;
+  width: 320px;
+  height: 320px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.wheel {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border: 6px solid #b8860b;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+  background: conic-gradient(
+    #3a5f3a 0deg 60deg,
+    #d4af37 60deg 120deg,
+    #3a5f3a 120deg 180deg,
+    #d4af37 180deg 240deg,
+    #3a5f3a 240deg 300deg,
+    #d4af37 300deg 360deg
+  );
+}
+
+.center-circle {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  background: #b8860b;
+  color: white;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 28px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.pointer {
+  position: absolute;
+  top: -10px;
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-bottom: 25px solid #c0392b;
+  z-index: 10;
+}
+
+.prize-text {
+  position: absolute;
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
+  left: 50%;
+  top: 50%;
+  transform-origin: center;
+}
+
+.spin-button {
+  background-color: #2e7d32;
+  color: white;
+  padding: 12px 30px;
+  font-size: 18px;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  transition: background 0.3s ease;
+}
+
+.spin-button:hover {
+  background-color: #1b5e20;
+}
+
+.spin-button.disabled {
+  background-color: gray;
+  cursor: not-allowed;
+}
+
+.result-text {
+  margin-top: 15px;
+  font-size: 20px;
+  color: #2e7d32;
+  font-weight: 600;
+}

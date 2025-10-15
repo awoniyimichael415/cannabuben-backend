@@ -1,0 +1,64 @@
+.spin-container {
+  text-align: center;
+  background: #fff;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.wheel {
+  position: relative;
+  width: 250px;
+  height: 250px;
+  margin: 1.5rem auto;
+  border-radius: 50%;
+  border: 8px solid #1e4b34;
+  background: conic-gradient(
+    #3fa267 0deg 45deg,
+    #d4af37 45deg 90deg,
+    #3fa267 90deg 135deg,
+    #d4af37 135deg 180deg,
+    #3fa267 180deg 225deg,
+    #d4af37 225deg 270deg,
+    #3fa267 270deg 315deg,
+    #d4af37 315deg 360deg
+  );
+  transition: transform 3s ease-out;
+}
+
+.wheel.spinning {
+  transform: rotate(1440deg);
+}
+
+.segment {
+  position: absolute;
+  width: 50%;
+  left: 50%;
+  top: 50%;
+  transform-origin: left center;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px #000;
+}
+
+.spin-btn {
+  background: #3fa267;
+  border: none;
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.spin-btn:hover {
+  background: #1e4b34;
+}
+
+.result {
+  margin-top: 1.5rem;
+  font-size: 1.2rem;
+  color: #1e4b34;
+}

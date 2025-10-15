@@ -1,0 +1,100 @@
+.game-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.wheel-container {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  margin-bottom: 16px;
+}
+
+.wheel {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 6px solid #2e5632;
+  position: relative;
+  overflow: hidden;
+  background: conic-gradient(
+    #d9f0d9 0deg 60deg,
+    #fff7d1 60deg 120deg,
+    #e4f8e3 120deg 180deg,
+    #faf6ec 180deg 240deg,
+    #dff8d9 240deg 300deg,
+    #f9efd2 300deg 360deg
+  );
+}
+
+.segment {
+  position: absolute;
+  width: 50%;
+  height: 50%;
+  left: 50%;
+  top: 50%;
+  transform-origin: 0% 0%;
+  font-size: 12px;
+  text-align: right;
+  padding-right: 8px;
+  font-weight: 600;
+  color: #1e1e1e;
+}
+
+.pointer {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 24px;
+  color: #2e5632;
+}
+
+.spin-btn {
+  background: #dbaf3e;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #1e1e1e;
+}
+
+.card-pack {
+  width: 200px;
+  height: 260px;
+  perspective: 1000px;
+  margin-bottom: 12px;
+}
+
+.card-img,
+.card-back {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  border: 2px solid #d3c089;
+  background: #faf6ec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  transition: transform 0.8s;
+  backface-visibility: hidden;
+}
+
+.card-pack.opening .card-img {
+  transform: rotateY(180deg);
+}
+
+.error-text {
+  color: #b62222;
+  font-weight: 600;
+}
+
+.result-text {
+  margin-top: 10px;
+  font-weight: 700;
+  color: #2e5632;
+}
