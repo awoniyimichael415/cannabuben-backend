@@ -199,6 +199,80 @@ body{background:var(--cream); color:var(--ink); margin:0; font-family:system-ui,
   .cards-grid{ grid-template-columns: 1fr; }
 }
 
+/* ===========================
+   📱 MOBILE RESPONSIVENESS FIXES
+   =========================== */
+@media (max-width: 768px) {
+  /* Stack panels vertically */
+  .grovi-grid {
+    grid-template-columns: 1fr !important;
+    padding: 12px;
+  }
+
+  /* Top navigation - stack items */
+  .grovi-topnav {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .grovi-top-logo img {
+    width: 100px;
+    margin: 8px auto;
+  }
+
+  .toplink {
+    font-size: 14px;
+    margin: 6px 8px;
+  }
+
+  /* Coins display smaller */
+  .grovi-coin-pill {
+    margin-top: 8px;
+    padding: 4px 10px;
+    font-size: 14px;
+  }
+
+  /* Sidebar collapses */
+  .grovi-sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 10px;
+    background: #2E5632;
+    z-index: 999;
+  }
+
+  .sidelink {
+    color: #fff !important;
+    font-size: 13px;
+  }
+
+  .grovi-sidebar-bottom {
+    display: none; /* hide coin + logout on mobile */
+  }
+
+  /* Cards smaller */
+  .card-thumb img {
+    width: 100%;
+    height: auto;
+  }
+
+  /* Panels take full width */
+  .panel {
+    width: 100%;
+  }
+
+  /* Text adjustments */
+  h2, h3, .panel-title {
+    font-size: 16px;
+  }
+}
+
 
 .auth-wrap {
   min-height: 100vh;
