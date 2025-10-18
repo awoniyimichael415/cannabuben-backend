@@ -4,19 +4,17 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const crypto = require("crypto");
 const cors = require("cors");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ✅ Import Models and Routes
 const User = require("./models/User.js");
+const Card = require("./models/Card.js");
 const authRoutes = require("./routes/authRoutes.js");
-const gameRoutes = require("./routes/gameRoutes");
-const Card = require("./models/Card.js"); // ensure this exists
+const gameRoutes = require("./routes/gameRoutes.js");
 
-// ----- Middleware -----
+// ✅ Middleware
 app.use(
   bodyParser.json({
     verify: (req, res, buf) => {
@@ -26,12 +24,15 @@ app.use(
 );
 app.use(cors());
 app.use(express.json());
+
+// ✅ Mount routes
 app.use("/api/auth", authRoutes);
 app.use("/api/game", gameRoutes);
 
-// ----- MongoDB connection -----
+// ✅ MongoDB connection
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://localhost:27017/cannabuben";
+
 mongoose.set("strictQuery", true);
 mongoose
   .connect(MONGODB_URI)
@@ -41,7 +42,7 @@ mongoose
     process.exit(1);
   });
 
-// ----- Transaction Schema -----
+// ✅ Transaction Schema
 const txSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -51,15 +52,13 @@ const txSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-// ✅ Prevent overwrite for Tx model
 const Tx = mongoose.models.Tx || mongoose.model("Tx", txSchema);
 
-// ----- Helper: verify WooCommerce webhook signature -----
+// ✅ Verify WooCommerce Webhook Signature
 function verifySignature(req) {
   const secret = process.env.WC_WEBHOOK_SECRET || "";
   const verify = (process.env.WEBHOOK_VERIFY || "true") !== "false";
-  if (!verify) return true; // disabled for local testing
+  if (!verify) return true;
   const signature = req.headers["x-wc-webhook-signature"] || "";
   if (!signature) return false;
   const hash = crypto
@@ -73,7 +72,7 @@ function verifySignature(req) {
   }
 }
 
-// ----- Webhook endpoint -----
+// ✅ WooCommerce Webhook
 app.post("/webhook/woocommerce", async (req, res) => {
   if (!verifySignature(req)) {
     console.warn("⚠️ Invalid webhook signature");
@@ -98,7 +97,7 @@ app.post("/webhook/woocommerce", async (req, res) => {
 
   const coinsToAdd = Math.floor(total);
   try {
-    let user = await User.findOne({ email: billingEmail });
+    let user = await User.findOne({ email: billingEmail.toLowerCase() });
     if (!user) user = new User({ email: billingEmail, wcCustomerId, coins: 0 });
 
     user.coins += coinsToAdd;
@@ -120,17 +119,38 @@ app.post("/webhook/woocommerce", async (req, res) => {
   }
 });
 
-// ----- Public API -----
+// ✅ Public User Coin Lookup
 app.get("/api/user", async (req, res) => {
   const email = req.query.email;
   if (!email) return res.status(400).json({ error: "email is required" });
   const user = await User.findOne({ email: String(email).toLowerCase() });
   if (!user) return res.json({ email, coins: 0 });
-  res.json({ email: user.email, coins: user.coins });
+  res.json({ email: user.email, coins: user.coins, name: user.name || "", avatar: user.avatar || null });
+});
+
+// ✅ Update User Profile (name & avatar only)
+app.post("/api/auth/update-profile", async (req, res) => {
+  try {
+    const { email, name, avatar } = req.body;
+    if (!email) return res.status(400).json({ error: "Email required" });
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Only update safe fields
+    if (name) user.name = name;
+    if (avatar) user.avatar = avatar;
+
+    await user.save();
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error("Update profile error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 // =====================================================
-// 🎡 REAL DAILY SPIN GAME — server-determined outcomes
+// 🎡 DAILY SPIN GAME
 // =====================================================
 app.post("/api/spin", async (req, res) => {
   try {
@@ -140,16 +160,12 @@ app.post("/api/spin", async (req, res) => {
     const user = await User.findOne({ email: String(email).toLowerCase() });
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // Define prize wheel values (adjust probabilities later)
-    const PRIZE_BUCKET = [5, 10, 10, 15, 20, 25, 50, 100];
-    const idx = Math.floor(Math.random() * PRIZE_BUCKET.length);
-    const prize = PRIZE_BUCKET[idx];
+    const PRIZE_BUCKET = [5, 10, 15, 20, 25, 50, 100];
+    const prize = PRIZE_BUCKET[Math.floor(Math.random() * PRIZE_BUCKET.length)];
 
-    // Update user coins safely
     user.coins += prize;
     await user.save();
 
-    // Log spin
     await Tx.create({
       userId: user._id,
       orderId: `SPIN-${Date.now()}`,
@@ -157,8 +173,7 @@ app.post("/api/spin", async (req, res) => {
       meta: { source: "daily-spin" },
     });
 
-    console.log(`🎡 Spin -> ${email}: +${prize} coins (total ${user.coins})`);
-
+    console.log(`🎡 Spin -> ${email}: +${prize} coins`);
     res.json({ success: true, prize, total: user.coins });
   } catch (err) {
     console.error("Spin error:", err);
@@ -166,15 +181,19 @@ app.post("/api/spin", async (req, res) => {
   }
 });
 
-// ----- Available Strain Cards -----
+// =====================================================
+// 🃏 STRAIN CARDS — Random collectible cards
+// =====================================================
 const STRAINS = [
   { id: 1, name: "California Haze", rarity: "Common", coins: 10 },
   { id: 2, name: "Purple Dream", rarity: "Rare", coins: 15 },
   { id: 3, name: "Gold Rush", rarity: "Epic", coins: 25 },
   { id: 4, name: "Mint Fusion", rarity: "Legendary", coins: 20 },
-  { id: 5, name: "Crimson Blaze", rarity: "Mythic", coins: 30 },
+  { id: 5, name: "Northern Lights", rarity: "Mythic", coins: 50 },
+  // 🔸 Add more cards freely later (up to 40+)
 ];
 
+// 🎯 Collect a Random Card
 app.post("/api/cards/collect", async (req, res) => {
   try {
     const { email } = req.body;
@@ -183,23 +202,19 @@ app.post("/api/cards/collect", async (req, res) => {
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // ✅ pick a random strain (now includes id)
     const random = STRAINS[Math.floor(Math.random() * STRAINS.length)];
 
-    // ✅ save to DB (include id reference)
     const card = await Card.create({
       userId: user._id,
       name: random.name,
       rarity: random.rarity,
       coinsEarned: random.coins,
-      cardId: random.id, // 👈 added for consistency
+      cardId: random.id,
     });
 
-    // ✅ add coins to user
     user.coins += random.coins;
     await user.save();
 
-    // ✅ log to transactions
     await Tx.create({
       userId: user._id,
       orderId: `CARD-${Date.now()}`,
@@ -209,7 +224,6 @@ app.post("/api/cards/collect", async (req, res) => {
 
     console.log(`🃏 ${email} collected ${random.name} (+${random.coins} coins)`);
 
-    // ✅ return everything frontend needs
     res.json({
       success: true,
       card: {
@@ -217,7 +231,6 @@ app.post("/api/cards/collect", async (req, res) => {
         name: random.name,
         rarity: random.rarity,
         coins: random.coins,
-        image: `/src/assets/card-front-${random.id}.png`, // 👈 helps frontend show instantly
       },
       totalCoins: user.coins,
     });
@@ -228,7 +241,7 @@ app.post("/api/cards/collect", async (req, res) => {
 });
 
 // =====================================================
-// 📦 GET /api/cards?email=... — persistent card fetch
+// 📦 Get All Collected Cards
 // =====================================================
 app.get("/api/cards", async (req, res) => {
   try {
@@ -244,8 +257,8 @@ app.get("/api/cards", async (req, res) => {
       name: c.name,
       rarity: c.rarity,
       coinsEarned: c.coinsEarned,
-      image: c.image ? `/assets/cards/${c.image}` : null,
       createdAt: c.createdAt,
+      cardId: c.cardId ?? null,
     }));
 
     return res.json({ success: true, cards: out });
@@ -255,11 +268,13 @@ app.get("/api/cards", async (req, res) => {
   }
 });
 
-// ----- Health check -----
+// =====================================================
+// 🩺 Health Check + Root Route
+// =====================================================
 app.get("/health", (req, res) => res.send("OK"));
+app.get("/", (req, res) => res.send("✅ CannaBuben backend is running fine!"));
 
-// ----- Start Server -----
-app.get('/', (req, res) => {
-  res.send('✅ CannaBuben backend is running fine!');
-});
+// =====================================================
+// 🚀 Start Server
+// =====================================================
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
