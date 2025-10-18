@@ -45,7 +45,7 @@ const CollectCard: React.FC<CollectCardProps> = ({ email, onCoinsUpdated, onColl
     setCard(null);
 
     try {
-      const res = await fetch("http://localhost:5000/api/cards/collect", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/cards/collect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
