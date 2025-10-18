@@ -200,78 +200,86 @@ body{background:var(--cream); color:var(--ink); margin:0; font-family:system-ui,
 }
 
 /* ===========================
-   📱 MOBILE RESPONSIVENESS FIXES
+   📱 MOBILE RESPONSIVE DESIGN
    =========================== */
 @media (max-width: 768px) {
-  /* Stack panels vertically */
-  .grovi-grid {
-    grid-template-columns: 1fr !important;
+  /* Hide sidebar completely */
+  .grovi-sidebar {
+    display: none !important;
+  }
+
+  /* Main area full width */
+  .grovi-main {
+    margin-left: 0 !important;
+    width: 100% !important;
     padding: 12px;
   }
 
-  /* Top navigation - stack items */
+  /* Top navigation stacks nicely */
   .grovi-topnav {
+    display: flex;
     flex-wrap: wrap;
     justify-content: center;
+    align-items: center;
     text-align: center;
+    gap: 8px;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding: 10px;
   }
 
   .grovi-top-logo img {
     width: 100px;
-    margin: 8px auto;
+    margin: 4px auto;
   }
 
   .toplink {
     font-size: 14px;
-    margin: 6px 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    text-decoration: none;
   }
 
-  /* Coins display smaller */
+  .toplink.active {
+    background: #2E5632;
+    color: #fff;
+  }
+
   .grovi-coin-pill {
-    margin-top: 8px;
-    padding: 4px 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #2E5632;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 12px;
     font-size: 14px;
   }
 
-  /* Sidebar collapses */
-  .grovi-sidebar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
+  /* Stack content */
+  .grovi-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px;
+  }
+
+  .panel {
     width: 100%;
-    height: auto;
-    flex-direction: row;
-    justify-content: space-around;
-    padding: 10px;
-    background: #2E5632;
-    z-index: 999;
   }
 
-  .sidelink {
-    color: #fff !important;
-    font-size: 13px;
+  .panel-inner {
+    padding: 12px;
   }
 
-  .grovi-sidebar-bottom {
-    display: none; /* hide coin + logout on mobile */
-  }
-
-  /* Cards smaller */
   .card-thumb img {
     width: 100%;
     height: auto;
   }
 
-  /* Panels take full width */
-  .panel {
-    width: 100%;
-  }
-
-  /* Text adjustments */
   h2, h3, .panel-title {
     font-size: 16px;
   }
 }
+
 
 
 .auth-wrap {
