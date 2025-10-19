@@ -280,8 +280,6 @@ body{background:var(--cream); color:var(--ink); margin:0; font-family:system-ui,
   }
 }
 
-
-
 .auth-wrap {
   min-height: 100vh;
   display: grid;
