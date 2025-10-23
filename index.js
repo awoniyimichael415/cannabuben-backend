@@ -14,6 +14,14 @@ const Card = require("./models/Card.js");
 const authRoutes = require("./routes/authRoutes.js");
 const gameRoutes = require("./routes/gameRoutes.js");
 
+// ✅ Phase 3 Routes
+const spinRoutes = require("./routes/spinRoutes.js");
+const boxRoutes = require("./routes/boxRoutes.js");
+const rewardRoutes = require("./routes/rewardRoutes.js");
+
+// ✅ SINGLE Admin Router (contains all admin endpoints)
+const adminRoutes = require("./routes/adminRoutes.js");
+
 // ✅ Middleware
 app.use(
   bodyParser.json({
@@ -25,9 +33,18 @@ app.use(
 app.use(cors());
 app.use(express.json());
 
-// ✅ Mount routes
+// ✅ Mount core routes
 app.use("/api/auth", authRoutes);
 app.use("/api/game", gameRoutes);
+
+// ✅ Mount feature routes
+app.use("/api/spin", spinRoutes);
+app.use("/api/box", boxRoutes);
+app.use("/api/rewards", rewardRoutes);
+
+// ✅ Mount Admin routes (one unified router)
+app.use("/api/admin", adminRoutes);
+
 
 // ✅ MongoDB connection
 const MONGODB_URI =
@@ -128,7 +145,7 @@ app.get("/api/user", async (req, res) => {
   res.json({ email: user.email, coins: user.coins, name: user.name || "", avatar: user.avatar || null });
 });
 
-// ✅ Update User Profile (name & avatar only)
+// ✅ Update User Profile
 app.post("/api/auth/update-profile", async (req, res) => {
   try {
     const { email, name, avatar } = req.body;
@@ -137,7 +154,6 @@ app.post("/api/auth/update-profile", async (req, res) => {
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // Only update safe fields
     if (name) user.name = name;
     if (avatar) user.avatar = avatar;
 
@@ -190,10 +206,8 @@ const STRAINS = [
   { id: 3, name: "Gold Rush", rarity: "Epic", coins: 25 },
   { id: 4, name: "Mint Fusion", rarity: "Legendary", coins: 20 },
   { id: 5, name: "Northern Lights", rarity: "Mythic", coins: 50 },
-  // 🔸 Add more cards freely later (up to 40+)
 ];
 
-// 🎯 Collect a Random Card
 app.post("/api/cards/collect", async (req, res) => {
   try {
     const { email } = req.body;
@@ -204,7 +218,7 @@ app.post("/api/cards/collect", async (req, res) => {
 
     const random = STRAINS[Math.floor(Math.random() * STRAINS.length)];
 
-    const card = await Card.create({
+    await Card.create({
       userId: user._id,
       name: random.name,
       rarity: random.rarity,
@@ -222,16 +236,9 @@ app.post("/api/cards/collect", async (req, res) => {
       meta: { card: random },
     });
 
-    console.log(`🃏 ${email} collected ${random.name} (+${random.coins} coins)`);
-
     res.json({
       success: true,
-      card: {
-        id: random.id,
-        name: random.name,
-        rarity: random.rarity,
-        coins: random.coins,
-      },
+      card: random,
       totalCoins: user.coins,
     });
   } catch (err) {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { API_URL } from "../lib/api";
-import { getAdminToken } from "../lib/adminAuth";
+import { API_URL } from "../../lib/api";
+import { getAdminToken } from "../../lib/adminAuth";
 
 interface AdminCard {
   id: string;

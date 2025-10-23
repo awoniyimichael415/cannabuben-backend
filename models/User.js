@@ -7,6 +7,13 @@ const userSchema = new mongoose.Schema(
     wcCustomerId: { type: String },
     coins: { type: Number, default: 0 },
     password: { type: String, default: "" }, // hashed when set
+
+    // Added fields correctly inside schema
+    lastFreeSpinAt: { type: Date },
+    lastPremiumSpinAt: { type: Date },
+    spinsUsed: { type: Number, default: 0 },
+    boxes: { type: Number, default: 0 },
+    role: { type: String, enum: ["user", "staff", "admin"], default: "user" },
   },
   { timestamps: true }
 );

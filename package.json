@@ -8,6 +8,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "seed": "node seed.js",
+    "seed:configs": "node scripts/seed-configs.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

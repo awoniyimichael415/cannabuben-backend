@@ -1,0 +1,134 @@
+:root {
+  --green: #2e5632;
+  --cream: #faf6ec;
+  --gold: #dbaf3e;
+  --stroke: #e6e1d5;
+}
+
+.admin-root {
+  display: flex;
+  min-height: 100vh;
+  background: var(--cream);
+  color: #1e1e1e;
+}
+
+/* Sidebar */
+.admin-sidebar {
+  width: 240px;
+  background: var(--green);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+.admin-sidebar.collapsed {
+  width: 80px;
+}
+.admin-logo-wrap img {
+  width: 150px;
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+.nav-link {
+  color: #fff;
+  text-decoration: none;
+  display: block;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.nav-link:hover,
+.nav-link.active {
+  background: #16351b;
+}
+.logout-btn {
+  margin-top: auto;
+  padding: 10px;
+  background: var(--gold);
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  color: #1e1e1e;
+  cursor: pointer;
+}
+
+/* Topbar */
+.admin-topbar {
+  background: white;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--stroke);
+}
+.admin-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.admin-content {
+  padding: 24px;
+}
+
+/* Tables */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.admin-table th,
+.admin-table td {
+  border-bottom: 1px solid var(--stroke);
+  padding: 12px 16px;
+  text-align: left;
+}
+.admin-table th {
+  background: var(--gold);
+  color: #1e1e1e;
+  font-weight: 800;
+}
+
+/* Login Page */
+.admin-login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: var(--cream);
+}
+.admin-login-box {
+  background: white;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  width: 340px;
+}
+.admin-login-box img {
+  width: 140px;
+  margin-bottom: 12px;
+}
+.admin-login-box input {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+}
+.admin-login-box button {
+  width: 100%;
+  padding: 12px;
+  background: var(--gold);
+  border: none;
+  border-radius: 8px;
+  color: #1e1e1e;
+  font-weight: 700;
+  margin-top: 10px;
+  cursor: pointer;
+}
+.admin-login-box .error {
+  color: #b91c1c;
+  font-size: 14px;
+  margin-top: 8px;
+}
