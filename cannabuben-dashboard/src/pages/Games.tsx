@@ -31,7 +31,7 @@ const Games: React.FC = () => {
 
   return (
     <main className="grovi-main">
-      {/* TOP NAV (same as Dashboard) */}
+      {/* TOP NAV (shared across pages) */}
       <div className="grovi-topnav">
         <div className="grovi-top-logo">
           <img src={logo} alt="CannaBuben" />
@@ -45,6 +45,9 @@ const Games: React.FC = () => {
         <NavLink to="/cards" className={({ isActive }) => (isActive ? "toplink active" : "toplink")}>
           Cards
         </NavLink>
+        <NavLink to="/profile" className={({ isActive }) => (isActive ? "toplink active" : "toplink")}>
+          Profile
+        </NavLink>
 
         <div className="grovi-coin-pill">
           <img src={coinIcon} alt="Coins" />
@@ -57,14 +60,7 @@ const Games: React.FC = () => {
         <h2 style={{ marginTop: 0, color: "#2E5632" }}>Games</h2>
         <p className="muted">Play the games below to win coins and collect cards.</p>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 16,
-            maxWidth: 1100,
-          }}
-        >
+        <div className="games-grid">
           <section className="panel">
             <div className="panel-inner">
               <h3 className="panel-title">🎯 Spin the Wheel</h3>

@@ -10,7 +10,7 @@ export default function Dashboard() {
     if (!email) return;
     setLoading(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+      const apiUrl = import.meta.env.VITE_API_URL || "https://cannabuben-backend-fkxi.onrender.com";
       const res = await fetch(`${apiUrl}/api/user?email=${encodeURIComponent(email)}`);
       const data = await res.json();
       setCoins(data.coins || 0);

@@ -1,71 +1,99 @@
 import React, { useEffect, useState } from "react";
-import { API_URL } from "../lib/api";
-import { getAdminToken } from "../lib/adminAuth";
+import { NavLink } from "react-router-dom";
+import "../styles/dashboard.css";
+import { apiGet } from "../lib/api";
+import { getEmail, isLoggedIn } from "../lib/auth";
+import logo from "../assets/logo.png";
+import coinIcon from "../assets/logo-icon.png";
+import cardBack from "../assets/card-back.png";
 
-interface AdminCard {
-  id: string;
-  user: string;
-  name: string;
-  rarity: string;
-  coinsEarned: number;
-  createdAt: string;
-}
-
-const AdminCards: React.FC = () => {
-  const [cards, setCards] = useState<AdminCard[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+const Cards: React.FC = () => {
+  const email = getEmail() || "";
+  const [cards, setCards] = useState<any[]>([]);
+  const [coins, setCoins] = useState<number | null>(null);
 
   useEffect(() => {
-    async function fetchCards() {
+    async function load() {
       try {
-        const res = await fetch(`${API_URL}/api/admin/cards`, {
-          headers: { Authorization: `Bearer ${getAdminToken()}` },
-        });
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error || "Failed to load cards");
-        setCards(json.cards || []);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+        let currentCoins: number | null = null;
+        if (isLoggedIn()) {
+          const res = await apiGet("/api/auth/me");
+          const json = await res.json();
+          if (res.ok && json?.success) currentCoins = json.user?.coins ?? 0;
+        }
+        setCoins(currentCoins ?? 0);
+
+        const r = await fetch(`https://cannabuben-backend-fkxi.onrender.com/api/cards?email=${encodeURIComponent(email)}`);
+        const j = await r.json();
+        if (r.ok && j?.success) setCards(j.cards || []);
+      } catch (e) {
+        console.error(e);
       }
     }
-    fetchCards();
-  }, []);
+    load();
+  }, [email]);
 
   return (
-    <div className="admin-page">
-      <h2>🃏 Collected Cards</h2>
-      {loading && <p>Loading cards...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+    <main className="grovi-main">
+      {/* TOP NAV (shared across pages) */}
+      <div className="grovi-topnav">
+        <div className="grovi-top-logo">
+          <img src={logo} alt="CannaBuben" />
+        </div>
+        <NavLink to="/" end className={({ isActive }) => (isActive ? "toplink active" : "toplink")}>
+          Dashboard
+        </NavLink>
+        <NavLink to="/games" className={({ isActive }) => (isActive ? "toplink active" : "toplink")}>
+          Games
+        </NavLink>
+        <NavLink to="/cards" className={({ isActive }) => (isActive ? "toplink active" : "toplink")}>
+          Cards
+        </NavLink>
+        <NavLink to="/profile" className={({ isActive }) => (isActive ? "toplink active" : "toplink")}>
+          Profile
+        </NavLink>
 
-      {!loading && !error && (
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Card</th>
-              <th>Rarity</th>
-              <th>Coins</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cards.map((c) => (
-              <tr key={c.id}>
-                <td>{c.user}</td>
-                <td>{c.name}</td>
-                <td>{c.rarity}</td>
-                <td>{c.coinsEarned}</td>
-                <td>{new Date(c.createdAt).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+        <div className="grovi-coin-pill">
+          <img src={coinIcon} alt="Coins" />
+          <span>{coins ?? "—"}</span>
+        </div>
+      </div>
+
+      {/* PAGE CONTENT */}
+      <div style={{ padding: 24 }}>
+        <h2 style={{ marginTop: 0, color: "#2E5632" }}>My Cards Collection</h2>
+        <p className="muted">Here are all your collected strain cards.</p>
+
+        <div
+          className="cards-grid"
+          style={{
+            marginTop: 20,
+            gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+          }}
+        >
+          {cards.length === 0 && (
+            <p className="muted">You haven’t collected any cards yet.</p>
+          )}
+
+          {cards.map((c, i) => (
+            <div key={c.id || i} className="card-thumb">
+              <div className="thumb-imgwrap">
+                <img src={c.image || cardBack} alt={c.name || "Card"} />
+              </div>
+              <div className="thumb-caption">
+                <div className="thumb-title">{c.name || "Strain Card"}</div>
+                {c.rarity && (
+                  <div className={`pill small rarity-${(c.rarity || "").toLowerCase()}`}>
+                    {c.rarity}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
   );
 };
 
-export default AdminCards;
+export default Cards;

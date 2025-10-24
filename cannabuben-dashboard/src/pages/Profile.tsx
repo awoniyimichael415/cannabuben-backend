@@ -22,7 +22,7 @@ const Profile: React.FC = () => {
       }
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:5000/api/user?email=${encodeURIComponent(email)}`);
+        const res = await fetch(`https://cannabuben-backend-fkxi.onrender.com/api/user?email=${encodeURIComponent(email)}`);
         const json = await res.json();
         if (res.ok) {
           setCoins(json.coins ?? 0);
@@ -42,7 +42,7 @@ const Profile: React.FC = () => {
     if (!name.trim()) return alert("Name cannot be empty");
     setSaving(true);
     try {
-      const res = await fetch("http://localhost:5000/api/auth/update-profile", {
+      const res = await fetch("https://cannabuben-backend-fkxi.onrender.com/api/auth/update-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, name, avatar }),

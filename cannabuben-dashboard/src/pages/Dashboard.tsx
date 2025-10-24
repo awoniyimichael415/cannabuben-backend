@@ -62,14 +62,14 @@ const Dashboard: React.FC = () => {
           if (res.ok && json?.success) currentCoins = json.user?.coins ?? 0;
         }
         if (currentCoins === null && email) {
-          const r = await fetch(`http://localhost:5000/api/user?email=${encodeURIComponent(email)}`);
+          const r = await fetch(`https://cannabuben-backend-fkxi.onrender.com/api/user?email=${encodeURIComponent(email)}`);
           const j = await r.json();
           currentCoins = j.coins ?? 0;
         }
         setCoins(currentCoins ?? 0);
 
         if (email) {
-          const cr = await fetch(`http://localhost:5000/api/cards?email=${encodeURIComponent(email)}`);
+          const cr = await fetch(`https://cannabuben-backend-fkxi.onrender.com/api/cards?email=${encodeURIComponent(email)}`);
           const cj = await cr.json();
           if (cr.ok && cj?.success) setCards(cj.cards || []);
         }

@@ -45,7 +45,6 @@ app.use("/api/rewards", rewardRoutes);
 // ✅ Mount Admin routes (one unified router)
 app.use("/api/admin", adminRoutes);
 
-
 // ✅ MongoDB connection
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://localhost:27017/cannabuben";

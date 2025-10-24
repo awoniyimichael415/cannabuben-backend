@@ -450,6 +450,116 @@ body {
   }
 }
 
+/* 🚨 Force Mobile Override Fix (Vercel-safe) */
+@media screen and (max-width: 768px) {
+  /* Hide sidebar entirely */
+  .grovi-sidebar {
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Make main section full width */
+  .grovi-main {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: calc(16px + env(safe-area-inset-top)) 12px calc(16px + env(safe-area-inset-bottom)) 12px !important;
+    min-height: 100dvh !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Safe sticky top nav */
+  .grovi-topnav {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 50 !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid rgba(0,0,0,0.1) !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: calc(10px + env(safe-area-inset-top)) 10px 10px !important;
+    gap: 10px !important;
+  }
+
+  /* Shrink top links for mobile */
+  .toplink {
+    font-size: 14px !important;
+    padding: 6px 10px !important;
+    border-radius: 6px !important;
+  }
+
+  .toplink.active {
+    background: #2E5632 !important;
+    color: #fff !important;
+    border-bottom: none !important;
+  }
+
+  .grovi-top-logo img {
+    width: 100px !important;
+    height: auto !important;
+  }
+
+  /* Coin pill styling */
+  .grovi-coin-pill {
+    background: #2E5632 !important;
+    color: #fff !important;
+    font-size: 14px !important;
+    padding: 5px 10px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Grid adjustment */
+  .grovi-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "mypoints"
+      "playwin"
+      "mycards" !important;
+    gap: 16px !important;
+  }
+
+  .cards-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Fix images and buttons */
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  button, .tile-btn {
+    font-size: 15px !important;
+    border-radius: 10px !important;
+  }
+
+  /* Prevent overflow */
+  body, html {
+    overflow-x: hidden !important;
+  }
+}
+
+/* 🎮 Game Page Layout */
+.games-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  max-width: 1100px;
+}
+
+/* Stack vertically on mobile */
+@media screen and (max-width: 768px) {
+  .games-grid {
+    grid-template-columns: 1fr !important;
+    max-width: 100% !important;
+  }
+}
+
 /* =========================
    ADMIN LAYOUT (responsive)
    ========================= */
