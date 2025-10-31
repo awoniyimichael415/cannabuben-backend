@@ -1,8 +1,27 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const Card = require("../models/Card");
+const Reward = require("../models/Reward");
+const SpinConfig = require("../models/SpinConfig");
+const BoxConfig = require("../models/BoxConfig");
+
+const Tx =
+  mongoose.models.Tx ||
+  mongoose.model(
+    "Tx",
+    new mongoose.Schema(
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        orderId: String,
+        coins: Number,
+        meta: Object,
+      },
+      { timestamps: true }
+    )
+  );
 
 const router = express.Router();
 
@@ -13,15 +32,22 @@ function requireAdmin(req, res, next) {
   try {
     const header = req.headers.authorization || "";
     const token = header.startsWith("Bearer ") ? header.slice(7) : null;
-    if (!token) return res.status(401).json({ success: false, error: "Missing token" });
+    if (!token)
+      return res.status(401).json({ success: false, error: "Missing token" });
 
-    const payload = jwt.verify(token, process.env.ADMIN_JWT_SECRET || "dev_admin_secret");
-    if (payload?.role !== "admin") return res.status(403).json({ success: false, error: "Not an admin" });
+    const payload = jwt.verify(
+      token,
+      process.env.ADMIN_JWT_SECRET || "dev_admin_secret"
+    );
+    if (payload?.role !== "admin")
+      return res.status(403).json({ success: false, error: "Not an admin" });
 
     req.admin = payload;
     next();
   } catch {
-    return res.status(401).json({ success: false, error: "Invalid/expired token" });
+    return res
+      .status(401)
+      .json({ success: false, error: "Invalid or expired token" });
   }
 }
 
@@ -32,7 +58,9 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
     if (!email || !password)
-      return res.status(400).json({ success: false, error: "Email and password required" });
+      return res
+        .status(400)
+        .json({ success: false, error: "Email and password required" });
 
     const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "";
     const ADMIN_HASH = process.env.ADMIN_PASSWORD_HASH || "";
@@ -40,13 +68,24 @@ router.post("/login", async (req, res) => {
     const EXPIRES = process.env.ADMIN_JWT_EXPIRES || "7d";
 
     if (email.trim().toLowerCase() !== ADMIN_EMAIL.trim().toLowerCase())
-      return res.status(401).json({ success: false, error: "Invalid credentials" });
+      return res
+        .status(401)
+        .json({ success: false, error: "Invalid credentials" });
 
     const ok = await bcrypt.compare(password, ADMIN_HASH);
-    if (!ok) return res.status(401).json({ success: false, error: "Invalid credentials" });
+    if (!ok)
+      return res
+        .status(401)
+        .json({ success: false, error: "Invalid credentials" });
 
-    const token = jwt.sign({ role: "admin", email: ADMIN_EMAIL }, SECRET, { expiresIn: EXPIRES });
-    return res.json({ success: true, token, admin: { email: ADMIN_EMAIL, role: "admin" } });
+    const token = jwt.sign({ role: "admin", email: ADMIN_EMAIL }, SECRET, {
+      expiresIn: EXPIRES,
+    });
+    return res.json({
+      success: true,
+      token,
+      admin: { email: ADMIN_EMAIL, role: "admin" },
+    });
   } catch (err) {
     console.error("Admin login error:", err);
     res.status(500).json({ success: false, error: "Server error" });
@@ -54,14 +93,54 @@ router.post("/login", async (req, res) => {
 });
 
 /* =====================================================
-   📊 Dashboard KPIs / Overview
+   📊 Dashboard KPIs — With Date Filter
 ===================================================== */
 router.get("/kpis", requireAdmin, async (req, res) => {
   try {
+    const range = Number(req.query.range || 0);
+    const now = new Date();
+    let startDate = null;
+    if (range === 7) startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    if (range === 30) startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const dateFilter = startDate ? { createdAt: { $gte: startDate } } : {};
+
     const totalUsers = await User.countDocuments();
-    const activeUsers = totalUsers; // Placeholder
-    const totalCoinsAgg = await User.aggregate([{ $group: { _id: null, total: { $sum: "$coins" } } }]);
+    const activeUsers = await User.countDocuments({
+      updatedAt: { $gte: startDate || new Date(0) },
+    });
+
+    const totalCoinsAgg = await User.aggregate([
+      { $group: { _id: null, total: { $sum: "$coins" } } },
+    ]);
     const totalCoins = totalCoinsAgg[0]?.total || 0;
+
+    const spinsUsedAgg = await User.aggregate([
+      { $group: { _id: null, total: { $sum: "$spinsUsed" } } },
+    ]);
+    const boxesOpenedAgg = await User.aggregate([
+      { $group: { _id: null, total: { $sum: "$boxesOpened" } } },
+    ]);
+
+    const coinsIssuedAgg = await Tx.aggregate([
+      { $match: { coins: { $gt: 0 }, ...dateFilter } },
+      { $group: { _id: null, total: { $sum: "$coins" } } },
+    ]);
+    const coinsBurnedAgg = await Tx.aggregate([
+      { $match: { coins: { $lt: 0 }, ...dateFilter } },
+      { $group: { _id: null, total: { $sum: "$coins" } } },
+    ]);
+
+    const topCards = await Card.aggregate([
+      { $match: dateFilter },
+      { $group: { _id: "$name", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+    ]);
+
+    const latestTx = await Tx.find(dateFilter)
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate("userId", "email");
 
     res.json({
       success: true,
@@ -69,16 +148,18 @@ router.get("/kpis", requireAdmin, async (req, res) => {
         totalUsers,
         activeUsers,
         totalCoins,
-        spinsUsed: 200,
-        boxesOpened: 100,
-        topCards: [
-          { _id: "Gold Rush", pulls: 24 },
-          { _id: "Purple Dream", pulls: 20 },
-        ],
-        latestTx: [
-          { meta: { source: "daily-spin" }, coins: 25 },
-          { meta: { source: "purchase" }, coins: 100 },
-        ],
+        spinsUsed: spinsUsedAgg[0]?.total || 0,
+        boxesOpened: boxesOpenedAgg[0]?.total || 0,
+        coinsIssued: coinsIssuedAgg[0]?.total || 0,
+        coinsBurned: Math.abs(coinsBurnedAgg[0]?.total || 0),
+        topCards,
+        latestTx: latestTx.map((t) => ({
+          id: t._id,
+          email: t.userId?.email || "—",
+          coins: t.coins,
+          source: t.meta?.source || "unknown",
+          createdAt: t.createdAt,
+        })),
       },
     });
   } catch (err) {
@@ -92,7 +173,9 @@ router.get("/kpis", requireAdmin, async (req, res) => {
 ===================================================== */
 router.get("/users", requireAdmin, async (req, res) => {
   try {
-    const users = await User.find({}, "email name coins createdAt").sort({ createdAt: -1 }).limit(100);
+    const users = await User.find({}, "email name coins banned createdAt").sort({
+      createdAt: -1,
+    });
     res.json({ success: true, users });
   } catch {
     res.status(500).json({ success: false, error: "Failed to load users" });
@@ -100,79 +183,426 @@ router.get("/users", requireAdmin, async (req, res) => {
 });
 
 /* =====================================================
-   🎁 Rewards
+   👮 Adjust User Coins / Ban
 ===================================================== */
-router.get("/rewards", requireAdmin, (req, res) => {
-  const rewards = [
-    { _id: "1", title: "10% Discount", cost: 100, stock: 20 },
-    { _id: "2", title: "Mystery Box", cost: 250, stock: 10 },
-  ];
-  res.json({ success: true, rewards });
-});
-
-/* =====================================================
-   💳 Transactions
-===================================================== */
-router.get("/transactions", requireAdmin, (req, res) => {
-  const txs = [
-    { id: "1", email: "user1@mail.com", coins: 20, type: "spin", date: new Date() },
-    { id: "2", email: "user2@mail.com", coins: 50, type: "purchase", date: new Date() },
-  ];
-  res.json({ success: true, txs });
-});
-
-/* =====================================================
-   🃏 Cards
-===================================================== */
-router.get("/cards", requireAdmin, async (req, res) => {
+router.put("/users/:id/coins", requireAdmin, async (req, res) => {
   try {
-    const cards = await Card.find()
-      .populate("userId", "email name")
-      .sort({ createdAt: -1 })
-      .limit(300);
-    res.json({
-      success: true,
-      cards: cards.map((c) => ({
-        id: c._id,
-        user: c.userId ? c.userId.email : "—",
-        name: c.name,
-        rarity: c.rarity,
-        coinsEarned: c.coinsEarned || 0,
-        createdAt: c.createdAt,
-      })),
-    });
+    const { coins, banned } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user)
+      return res.status(404).json({ success: false, error: "User not found" });
+
+    if (typeof coins === "number") user.coins = coins;
+    if (typeof banned === "boolean") user.banned = banned;
+    await user.save();
+
+    res.json({ success: true, user });
   } catch (err) {
-    console.error("Admin cards error:", err);
+    console.error("Adjust coins error:", err);
     res.status(500).json({ success: false, error: "Server error" });
   }
 });
 
 /* =====================================================
-   🎮 Games Config
+   🎁 Rewards CRUD
 ===================================================== */
-router.get("/games", requireAdmin, (req, res) => {
-  res.json({
-    success: true,
-    spin: { "+1 Coin": "45%", "+5 Coins": "25%", "+10 Coins": "15%", "+25 Coins": "10%", "Mystery Box": "5%" },
-    box: { Common: "60%", Rare: "25%", Epic: "10%", Legendary: "5%" },
-  });
+router.get("/rewards", requireAdmin, async (req, res) => {
+  const rewards = await Reward.find().sort({ createdAt: -1 });
+  res.json({ success: true, rewards });
+});
+
+router.post("/rewards", requireAdmin, async (req, res) => {
+  try {
+    const reward = await Reward.create(req.body);
+    res.json({ success: true, reward });
+  } catch (err) {
+    console.error("Create reward error:", err);
+    res.status(500).json({ success: false, error: "Failed to create reward" });
+  }
+});
+
+router.put("/rewards/:id", requireAdmin, async (req, res) => {
+  try {
+    const reward = await Reward.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    if (!reward)
+      return res
+        .status(404)
+        .json({ success: false, error: "Reward not found" });
+    res.json({ success: true, reward });
+  } catch (err) {
+    console.error("Update reward error:", err);
+    res.status(500).json({ success: false, error: "Failed to update reward" });
+  }
+});
+
+router.delete("/rewards/:id", requireAdmin, async (req, res) => {
+  try {
+    await Reward.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Delete reward error:", err);
+    res.status(500).json({ success: false, error: "Failed to delete reward" });
+  }
 });
 
 /* =====================================================
-   📈 Analytics
+   🃏 Cards Management (Full CRUD)
+===================================================== */
+// GET all cards
+router.get("/cards", requireAdmin, async (req, res) => {
+  try {
+    const cards = await Card.find().sort({ createdAt: -1 });
+    res.json({ success: true, cards });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Failed to load cards" });
+  }
+});
+
+// CREATE new card
+router.post("/cards", requireAdmin, async (req, res) => {
+  try {
+    const card = await Card.create(req.body);
+    res.json({ success: true, card });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Failed to create card" });
+  }
+});
+
+// UPDATE card by ID
+router.put("/cards/:id", requireAdmin, async (req, res) => {
+  try {
+    const card = await Card.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!card) return res.status(404).json({ success: false, error: "Card not found" });
+    res.json({ success: true, card });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Failed to update card" });
+  }
+});
+
+// DELETE card by ID
+router.delete("/cards/:id", requireAdmin, async (req, res) => {
+  try {
+    const card = await Card.findByIdAndDelete(req.params.id);
+    if (!card) return res.status(404).json({ success: false, error: "Card not found" });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Failed to delete card" });
+  }
+});
+
+// ======================
+// 🃏 CARD MANAGEMENT
+// ======================
+
+// 🔹 Get all cards
+router.get("/cards", async (req, res) => {
+  try {
+    const cards = await Card.find().sort({ createdAt: -1 });
+    res.json({ success: true, cards });
+  } catch (err) {
+    console.error("Error fetching cards:", err);
+    res.status(500).json({ success: false, error: "Failed to load cards" });
+  }
+});
+
+// 🔹 Create a new card
+router.post("/cards", async (req, res) => {
+  try {
+    const { name, rarity, imageUrl, description, category, active } = req.body;
+    if (!name) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Card name is required" });
+    }
+
+    const newCard = new Card({
+      name,
+      rarity,
+      imageUrl,
+      description,
+      category,
+      active,
+      obtainedFrom: "admin",
+    });
+
+    await newCard.save();
+    res.json({ success: true, card: newCard });
+  } catch (err) {
+    console.error("Error creating card:", err);
+    res.status(500).json({ success: false, error: "Failed to create card" });
+  }
+});
+
+// 🔹 Update an existing card
+router.put("/cards/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await Card.findByIdAndUpdate(id, req.body, {
+      new: true,
+    });
+    if (!updated)
+      return res
+        .status(404)
+        .json({ success: false, error: "Card not found" });
+    res.json({ success: true, card: updated });
+  } catch (err) {
+    console.error("Error updating card:", err);
+    res.status(500).json({ success: false, error: "Failed to update card" });
+  }
+});
+
+// 🔹 Delete a card
+router.delete("/cards/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Card.findByIdAndDelete(id);
+    if (!deleted)
+      return res
+        .status(404)
+        .json({ success: false, error: "Card not found" });
+    res.json({ success: true, message: "Card deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting card:", err);
+    res.status(500).json({ success: false, error: "Failed to delete card" });
+  }
+});
+
+
+/* =====================================================
+   💳 Transactions (Real)
+===================================================== */
+router.get("/transactions", requireAdmin, async (req, res) => {
+  try {
+    const txs = await Tx.find()
+      .populate("userId", "email")
+      .sort({ createdAt: -1 })
+      .limit(200);
+    res.json({ success: true, txs });
+  } catch (err) {
+    console.error("Tx fetch error:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* =====================================================
+   🎮 Game Config — SpinConfig + BoxConfig (Draft / Publish)
+   Matches Grovi MVP game logic + admin control
+===================================================== */
+
+// helper: get latest by updatedAt
+async function getLatestDoc(Model) {
+  const doc = await Model.findOne().sort({ updatedAt: -1 });
+  if (doc) return doc;
+  return null;
+}
+
+// GET /api/admin/games
+// returns the most recent SpinConfig + BoxConfig (or seeds defaults if empty)
+router.get("/games", requireAdmin, async (req, res) => {
+  try {
+    // 1. SpinConfig
+    let spin = await getLatestDoc(SpinConfig);
+    if (!spin) {
+      spin = await SpinConfig.create({
+        rewards: [
+          { label: "+1 Coin", coins: 1, box: false, weight: 45 },
+          { label: "+5 Coins", coins: 5, box: false, weight: 25 },
+          { label: "+10 Coins", coins: 10, box: false, weight: 15 },
+          { label: "+25 Coins", coins: 25, box: false, weight: 10 },
+          { label: "Mystery Box", coins: 0, box: true, weight: 5 },
+        ],
+        freeCooldownHours: 24,
+        premiumCooldownHours: 6,
+        version: 1,
+        status: "draft",
+        publishedBy: null,
+      });
+    }
+
+    // 2. BoxConfig
+    let box = await getLatestDoc(BoxConfig);
+    if (!box) {
+      box = await BoxConfig.create({
+        weights: {
+          Common: 60,
+          Rare: 25,
+          Epic: 10,
+          Legendary: 5,
+        },
+        cardsPerBox: 1,
+        version: 1,
+        status: "draft",
+        publishedBy: null,
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { spin, box },
+    });
+  } catch (err) {
+    console.error("Admin GET /games error:", err);
+    res
+      .status(500)
+      .json({ success: false, error: "Failed to load game config" });
+  }
+});
+
+// PUT /api/admin/games
+// body expects: { spin: {...}, box: {...}, publish?: boolean }
+router.put("/games", requireAdmin, async (req, res) => {
+  try {
+    const { spin, box, publish } = req.body;
+    if (!spin || !box) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Missing spin or box config" });
+    }
+
+    // --- Update or create SpinConfig draft ---
+    let spinCfg = await getLatestDoc(SpinConfig);
+    if (!spinCfg) {
+      // if db is empty, create fresh draft
+      spinCfg = await SpinConfig.create({
+        ...spin,
+        status: "draft",
+        version: 1,
+      });
+    } else {
+      // merge changes into the latest config doc
+      Object.assign(spinCfg, spin);
+    }
+
+    // if admin is publishing -> mark published, bump version
+    if (publish === true) {
+      spinCfg.status = "published";
+      spinCfg.version = (spinCfg.version || 1) + 1;
+      spinCfg.publishedBy = req.admin.email;
+    } else {
+      // still editing, keep as draft
+      if (spinCfg.status !== "published") {
+        spinCfg.status = "draft";
+      }
+    }
+
+    await spinCfg.save();
+
+    // --- Update or create BoxConfig draft ---
+    let boxCfg = await getLatestDoc(BoxConfig);
+    if (!boxCfg) {
+      boxCfg = await BoxConfig.create({
+        ...box,
+        status: "draft",
+        version: 1,
+      });
+    } else {
+      Object.assign(boxCfg, box);
+    }
+
+    if (publish === true) {
+      boxCfg.status = "published";
+      boxCfg.version = (boxCfg.version || 1) + 1;
+      boxCfg.publishedBy = req.admin.email;
+    } else {
+      if (boxCfg.status !== "published") {
+        boxCfg.status = "draft";
+      }
+    }
+
+    await boxCfg.save();
+
+    // --- Audit log this change ---
+    // We already defined recordAdminAction(req, action, entity, entityId, details)
+    // earlier in your file. We'll call it here.
+    if (typeof recordAdminAction === "function") {
+      await recordAdminAction(
+        req,
+        publish === true ? "Publish Game Config" : "Save Game Config Draft",
+        "game_config",
+        spinCfg._id?.toString() || "",
+        {
+          publish,
+          spinVersion: spinCfg.version,
+          boxVersion: boxCfg.version,
+        }
+      );
+    }
+
+    res.json({
+      success: true,
+      message: publish === true ? "Config published" : "Draft saved",
+      data: {
+        spin: spinCfg,
+        box: boxCfg,
+      },
+    });
+  } catch (err) {
+    console.error("Admin PUT /games error:", err);
+    res
+      .status(500)
+      .json({ success: false, error: "Failed to update game config" });
+  }
+});
+
+
+
+/* =====================================================
+   📈 Analytics — Live Trends
 ===================================================== */
 router.get("/analytics", requireAdmin, async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments();
-    const totalCards = await Card.countDocuments();
+    const signups = await User.aggregate([
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+      { $limit: 7 },
+    ]);
+
+    const coinsIssuedAgg = await Tx.aggregate([
+      { $match: { coins: { $gt: 0 } } },
+      { $group: { _id: null, total: { $sum: "$coins" } } },
+    ]);
+    const coinsBurnedAgg = await Tx.aggregate([
+      { $match: { coins: { $lt: 0 } } },
+      { $group: { _id: null, total: { $sum: "$coins" } } },
+    ]);
+    const coinsIssued = coinsIssuedAgg[0]?.total || 0;
+    const coinsBurned = Math.abs(coinsBurnedAgg[0]?.total || 0);
+
+    const spinsUsed = await User.aggregate([
+      { $group: { _id: null, total: { $sum: "$spinsUsed" } } },
+    ]);
+    const boxesOpened = await User.aggregate([
+      { $group: { _id: null, total: { $sum: "$boxesOpened" } } },
+    ]);
+
+    const topRewards = await Reward.find({ active: true })
+      .sort({ stock: 1 })
+      .limit(5)
+      .select("title priceCoins stock");
+
+    const topCards = await Card.aggregate([
+      { $group: { _id: "$name", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+    ]);
+
     res.json({
       success: true,
       analytics: {
-        users: totalUsers,
-        cards: totalCards,
-        retention: "82%",
-        dailySpins: 140,
-        topReward: "Mystery Box",
+        signups,
+        coinsIssued,
+        coinsBurned,
+        spinsUsed: spinsUsed[0]?.total || 0,
+        boxesOpened: boxesOpened[0]?.total || 0,
+        topRewards,
+        topCards,
       },
     });
   } catch (err) {
@@ -182,19 +612,194 @@ router.get("/analytics", requireAdmin, async (req, res) => {
 });
 
 /* =====================================================
-   ⚙️ Settings
+   ⚙️ SYSTEM SETTINGS + ADMIN AUDIT LOG (Grovi Spec)
+   This section implements:
+   - Persistent settings model
+   - Audit logging for admin actions
+   - GET /api/admin/settings
+   - PUT /api/admin/settings
+   - GET /api/admin/audit
 ===================================================== */
-router.get("/settings", requireAdmin, (req, res) => {
-  res.json({
-    success: true,
-    settings: {
-      version: "1.0.0",
-      maintenance: false,
-      environment: process.env.NODE_ENV || "development",
-      spinCooldown: "24h",
-      premiumSpinCooldown: "6h",
+
+// -----------------------------
+// Settings Schema
+// -----------------------------
+const settingsSchema = new mongoose.Schema(
+  {
+    version: { type: String, default: "1.0.0" },
+    maintenance: { type: Boolean, default: false },
+    environment: {
+      type: String,
+      enum: ["development", "staging", "production"],
+      default: "production",
     },
-  });
+    spinCooldown: { type: String, default: "24h" },
+    premiumSpinCooldown: { type: String, default: "6h" },
+    coinBurnRate: { type: Number, default: 0 },
+    rewardMultiplier: { type: Number, default: 1 },
+  },
+  { timestamps: true }
+);
+const Settings =
+  mongoose.models.Settings || mongoose.model("Settings", settingsSchema);
+
+// -----------------------------
+// Admin Audit Schema
+// -----------------------------
+const auditSchema = new mongoose.Schema(
+  {
+    adminEmail: { type: String, required: true },
+    action: { type: String, required: true },
+    details: { type: Object, default: {} },
+    ip: { type: String },
+  },
+  { timestamps: true }
+);
+const AdminAudit =
+  mongoose.models.AdminAudit || mongoose.model("AdminAudit", auditSchema);
+
+// -----------------------------
+// Helper: Record Admin Action
+// -----------------------------
+async function logAdminAction(adminEmail, action, details = {}, req = null) {
+  try {
+    await AdminAudit.create({
+      adminEmail,
+      action,
+      details,
+      ip: req?.ip || "unknown",
+    });
+  } catch (err) {
+    console.error("Audit log save error:", err.message);
+  }
+}
+
+// -----------------------------
+// GET Settings
+// -----------------------------
+router.get("/settings", requireAdmin, async (req, res) => {
+  try {
+    let settings = await Settings.findOne();
+    if (!settings) {
+      settings = await Settings.create({});
+    }
+    res.json({ success: true, settings });
+  } catch (err) {
+    console.error("Settings GET error:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// -----------------------------
+// UPDATE Settings
+// -----------------------------
+router.put("/settings", requireAdmin, async (req, res) => {
+  try {
+    const update = req.body;
+    let settings = await Settings.findOne();
+
+    if (!settings) {
+      settings = await Settings.create(update);
+    } else {
+      Object.assign(settings, update);
+      await settings.save();
+    }
+
+    // ✅ Record audit trail
+    await logAdminAction(req.admin.email, "Updated system settings", update, req);
+
+    res.json({
+      success: true,
+      message: "Settings updated successfully",
+      settings,
+    });
+  } catch (err) {
+    console.error("Settings PUT error:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// -----------------------------
+// GET Audit Logs
+// -----------------------------
+router.get("/audit", requireAdmin, async (req, res) => {
+  try {
+    const logs = await AdminAudit.find().sort({ createdAt: -1 }).limit(100);
+    res.json({ success: true, logs });
+  } catch (err) {
+    console.error("Audit fetch error:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// ============================================================
+// ✅ GET all active rewards (User view)
+// ============================================================
+router.get("/", async (req, res) => {
+  try {
+    const rewards = await Reward.find({ status: "active" })
+      .select("title description priceCoins type stock imageUrl")
+      .sort({ createdAt: -1 });
+    res.json({ success: true, rewards });
+  } catch (err) {
+    console.error("Rewards fetch error:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// ============================================================
+// ✅ POST Redeem a reward
+// ============================================================
+router.post("/redeem", async (req, res) => {
+  try {
+    const { email, rewardId } = req.body;
+    if (!email || !rewardId)
+      return res.status(400).json({ error: "Email and rewardId required" });
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const reward = await Reward.findById(rewardId);
+    if (!reward || reward.status !== "active")
+      return res.status(404).json({ error: "Reward unavailable" });
+
+    if (reward.stock <= 0)
+      return res.status(400).json({ error: "Out of stock" });
+
+    if (user.coins < reward.priceCoins)
+      return res.status(400).json({ error: "Not enough coins" });
+
+    // Deduct coins
+    user.coins -= reward.priceCoins;
+
+    // Apply reward effect
+    if (reward.type === "mysteryBox") user.boxesOwned += 1;
+    if (reward.type === "spinTicket") user.spinsUsed = Math.max(0, user.spinsUsed - 1);
+
+    await user.save();
+
+    // Reduce reward stock
+    reward.stock -= 1;
+    await reward.save();
+
+    // Log transaction
+    await Tx.create({
+      userId: user._id,
+      orderId: `REDEEM-${Date.now()}`,
+      coins: -reward.priceCoins,
+      meta: { source: "redeem", reward: reward.title, type: reward.type },
+    });
+
+    res.json({
+      success: true,
+      message: "Reward redeemed successfully",
+      remainingCoins: user.coins,
+      boxesOwned: user.boxesOwned,
+    });
+  } catch (err) {
+    console.error("Redeem error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 module.exports = router;

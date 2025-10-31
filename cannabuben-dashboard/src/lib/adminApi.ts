@@ -1,28 +1,22 @@
-export const ADMIN_API = import.meta.env.VITE_API_URL + "/api/admin";
+import axios from "axios";
 
-export async function adminGet(path: string, token: string) {
-  const res = await fetch(`${ADMIN_API}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.json();
+// Load token from localStorage
+function getAdminToken() {
+  try {
+    return localStorage.getItem("adminToken") || "";
+  } catch {
+    return "";
+  }
 }
 
-export async function adminPost(path: string, token: string, data: any) {
-  const res = await fetch(`${ADMIN_API}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  });
-  return res.json();
-}
+export const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
+  headers: { "Content-Type": "application/json" },
+});
 
-export async function adminDelete(path: string, token: string) {
-  const res = await fetch(`${ADMIN_API}${path}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.json();
-}
+// Automatically attach token for admin routes
+api.interceptors.request.use((config) => {
+  const token = getAdminToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});

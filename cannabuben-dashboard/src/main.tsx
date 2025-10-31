@@ -10,8 +10,10 @@ import AdminProtectedRoute from "./components/admin/AdminProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Games from "./pages/Games";
 import Cards from "./pages/Cards";
+import Rewards from "./pages/Rewards";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
+
 
 // ===== ADMIN PAGES =====
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -25,6 +27,7 @@ import AdminTransactions from "./pages/admin/Transactions";
 import AdminGames from "./pages/admin/Games";
 import AdminAnalytics from "./pages/admin/Analytics";
 import AdminSettings from "./pages/admin/Settings";
+import AdminLogs from "./pages/admin/AdminLogs"; // ✅ NEW IMPORT
 
 // ===== STYLES =====
 import "./styles/dashboard.css";
@@ -44,47 +47,8 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
-  {
-  path: "/admin",
-  element: (
-    <AdminProtectedRoute>
-      <AdminLayout />
-    </AdminProtectedRoute>
-  ),
-  children: [
-    { index: true, element: <AdminOverview /> },
-    // ...other admin routes
-  ],
-},
-  {
-    path: "/games",
-    element: (
-      <ProtectedRoute>
-        <Games />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/cards",
-    element: (
-      <ProtectedRoute>
-        <Cards />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/profile",
-    element: (
-      <ProtectedRoute>
-        <Profile />
-      </ProtectedRoute>
-    ),
-  },
 
-  // ============ ADMIN LOGIN ============
-  { path: "/admin/login", element: <AdminLogin /> },
-
-  // ============ ADMIN DASHBOARD ============
+  // ============ ADMIN ROUTES ============
   {
     path: "/admin",
     element: (
@@ -101,12 +65,48 @@ const router = createBrowserRouter([
       { path: "games", element: <AdminGames /> },
       { path: "analytics", element: <AdminAnalytics /> },
       { path: "settings", element: <AdminSettings /> },
+      { path: "logs", element: <AdminLogs /> }, // ✅ NEW AUDIT LOGS ROUTE
     ],
   },
 
-  // ============ OPTIONAL LEGACY FALLBACK ============
-  // If someone directly goes to /admin/* and not covered above,
-  // render the old AdminDashboard shell to avoid 404
+// ============ USER MODULES ============
+{
+  path: "/games",
+  element: (
+    <ProtectedRoute>
+      <Games />
+    </ProtectedRoute>
+  ),
+},
+{
+  path: "/cards",
+  element: (
+    <ProtectedRoute>
+      <Cards />
+    </ProtectedRoute>
+  ),
+},
+{
+  path: "/rewards", // ✅ NEW REWARD PAGE ROUTE
+  element: (
+    <ProtectedRoute>
+      <Rewards />
+    </ProtectedRoute>
+  ),
+},
+{
+  path: "/profile",
+  element: (
+    <ProtectedRoute>
+      <Profile />
+    </ProtectedRoute>
+    ),
+},
+
+  // ============ ADMIN LOGIN ============
+  { path: "/admin/login", element: <AdminLogin /> },
+
+  // ============ LEGACY FALLBACK ============
   { path: "/admin/*", element: <AdminDashboard /> },
 ]);
 

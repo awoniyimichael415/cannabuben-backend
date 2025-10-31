@@ -48,6 +48,9 @@ const Games: React.FC = () => {
         <NavLink to="/profile" className={({ isActive }) => (isActive ? "toplink active" : "toplink")}>
           Profile
         </NavLink>
+        <NavLink to="/Rewards" className={({ isActive }) => (isActive ? "toplink active" : "toplink")}>
+          Rewards
+        </NavLink>
 
         <div className="grovi-coin-pill">
           <img src={coinIcon} alt="Coins" />

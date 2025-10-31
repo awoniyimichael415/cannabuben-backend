@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { API_URL } from "../lib/api";
 import { setSession } from "../lib/auth";
 import "../styles/dashboard.css"; // reuse your styles
+import logo from "../assets/logo.png"; // ✅ your real logo
 
 const Auth: React.FC = () => {
   const nav = useNavigate();
@@ -39,10 +40,19 @@ const Auth: React.FC = () => {
   return (
     <div className="auth-wrap">
       <form className="auth-card" onSubmit={submit}>
-        <div className="cb-brand" style={{ marginBottom: 12 }}>
-          <div className="cb-leaf" />
-          <div className="cb-title">CannaBuben</div>
+        {/* ✅ Replace text with logo */}
+        <div style={{ textAlign: "center", marginBottom: 16 }}>
+          <img
+            src={logo}
+            alt="CannaBuben Logo"
+            style={{
+              width: 140,
+              height: "auto",
+              marginBottom: 6,
+            }}
+          />
         </div>
+
         <h2 style={{ margin: 0 }}>
           {mode === "login" ? "Sign in" : "Create account"}
         </h2>
@@ -70,10 +80,34 @@ const Auth: React.FC = () => {
           placeholder="••••••••"
         />
 
-        {err && <div className="cb-error" style={{ marginTop: 8 }}>{err}</div>}
+        {err && (
+          <div className="cb-error" style={{ marginTop: 8 }}>
+            {err}
+          </div>
+        )}
 
-        <button className="cb-action-btn" type="submit" disabled={loading} style={{ width: "100%", marginTop: 10 }}>
-          {loading ? "Please wait..." : mode === "login" ? "Sign in" : "Create account"}
+        {/* ✅ Styled Sign In / Register button (same as AdminLogin style) */}
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: "100%",
+            padding: 12,
+            background: "#2E5632",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            fontWeight: 700,
+            cursor: loading ? "not-allowed" : "pointer",
+            transition: "background 0.3s ease",
+            marginTop: 12,
+          }}
+        >
+          {loading
+            ? "Please wait..."
+            : mode === "login"
+            ? "Sign in"
+            : "Create account"}
         </button>
 
         <div style={{ textAlign: "center", marginTop: 10 }}>
@@ -103,7 +137,9 @@ const Auth: React.FC = () => {
         </div>
 
         <div style={{ textAlign: "center", marginTop: 12 }}>
-          <Link to="/" className="link-btn">Back to Dashboard</Link>
+          <Link to="/" className="link-btn">
+            Back to Dashboard
+          </Link>
         </div>
       </form>
     </div>

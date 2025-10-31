@@ -16,6 +16,34 @@ import card2 from "../assets/card-front-2.png";
 import card3 from "../assets/card-front-3.png";
 import card4 from "../assets/card-front-4.png";
 import card5 from "../assets/card-front-5.png";
+import card6 from "../assets/card-front-6.png";
+import card7 from "../assets/card-front-7.png";
+import card8 from "../assets/card-front-8.png";
+import card9 from "../assets/card-front-9.png";
+import card10 from "../assets/card-front-10.png";
+import card11 from "../assets/card-front-11.png";
+import card12 from "../assets/card-front-12.png";
+import card13 from "../assets/card-front-13.png";
+import card14 from "../assets/card-front-14.png";
+import card15 from "../assets/card-front-15.png";
+import card16 from "../assets/card-front-16.png";
+import card17 from "../assets/card-front-17.png";
+import card18 from "../assets/card-front-18.png";
+import card19 from "../assets/card-front-19.png";
+import card20 from "../assets/card-front-20.png";
+import card21 from "../assets/card-front-21.png";
+import card22 from "../assets/card-front-22.png";
+import card23 from "../assets/card-front-23.png";
+import card24 from "../assets/card-front-24.png";
+import card25 from "../assets/card-front-25.png";
+import card26 from "../assets/card-front-26.png";
+import card27 from "../assets/card-front-27.png";
+import card28 from "../assets/card-front-28.png";
+import card29 from "../assets/card-front-29.png";
+import card30 from "../assets/card-front-30.png";
+import card31 from "../assets/card-front-31.png";
+import card32 from "../assets/card-front-32.png";
+import card33 from "../assets/card-front-33.png";
 import cardBack from "../assets/card-back.png";
 
 type CardItem = {
@@ -45,6 +73,34 @@ const Dashboard: React.FC = () => {
       case 3: return card3;
       case 4: return card4;
       case 5: return card5;
+      case 6: return card6;
+      case 7: return card7;
+      case 8: return card8;
+      case 9: return card9;
+      case 10: return card10;
+      case 11: return card11;
+      case 12: return card12;
+      case 13: return card13;
+      case 14: return card14;
+      case 15: return card15;
+      case 16: return card16;
+      case 17: return card17;
+      case 18: return card18;
+      case 19: return card19;
+      case 20: return card20;
+      case 21: return card21;
+      case 22: return card22;
+      case 23: return card23;
+      case 24: return card24;
+      case 25: return card25;
+      case 26: return card26;
+      case 27: return card27;
+      case 28: return card28;
+      case 29: return card29;
+      case 30: return card30;
+      case 31: return card31;
+      case 32: return card32;
+      case 33: return card33;
       default: return cardBack;
     }
   }
@@ -108,6 +164,9 @@ const Dashboard: React.FC = () => {
           <NavLink to="/profile" className={({ isActive }) => "sidelink" + (isActive ? " active" : "")}>
             <span className="icon">👤</span> Profile
           </NavLink>
+          <NavLink to="/Rewards" className={({ isActive }) => "sidelink" + (isActive ? " active" : "")}>
+            <span className="icon">🎁</span> Rewards
+          </NavLink>
         </nav>
 
         <div className="grovi-sidebar-bottom">
@@ -138,6 +197,9 @@ const Dashboard: React.FC = () => {
           {/* ✅ Added Profile link to top bar */}
           <NavLink to="/profile" className={({ isActive }) => (isActive ? "toplink active" : "toplink")}>
             Profile
+          </NavLink>
+          <NavLink to="/Rewards" className={({ isActive }) => (isActive ? "toplink active" : "toplink")}>
+            Rewards
           </NavLink>
 
           <div className="grovi-coin-pill">

@@ -1,21 +1,27 @@
-// src/lib/api.ts
 import { getToken } from "./auth";
 
 export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+// 🔹 Reusable GET helper
 export async function apiGet(path: string) {
+  const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
-    headers: { Authorization: `Bearer ${getToken() || ""}` },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
   return res;
 }
 
-export async function apiPost(path: string, body: any) {
+// 🔹 Reusable POST helper
+export async function apiPost(path: string, body: any = {}) {
+  const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getToken() || ""}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(body),
   });
