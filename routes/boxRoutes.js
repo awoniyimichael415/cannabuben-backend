@@ -206,4 +206,67 @@ router.post("/fuse", requireAuth, async (req, res) => {
   }
 });
 
+/* ============================================================
+   🃏 GET USER CARDS (for Dashboard & Cards pages)
+============================================================ */
+router.get("/", async (req, res) => {
+  try {
+    const { email } = req.query;
+<<<<<<< HEAD
+    if (!email) return res.status(400).json({ success: false, error: "Email is required" });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ success: false, error: "User not found" });
+
+    const cards = await Card.find({ userId: user._id }).sort({ createdAt: -1 });
+
+    res.json({ success: true, cards });
+=======
+    if (!email)
+      return res.status(400).json({ success: false, error: "Email is required" });
+
+    const user = await User.findOne({ email });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, error: "User not found" });
+
+    // 🟢 Get game cards (from box/spin)
+    const gameCards = await Card.find({ userId: user._id })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // 🧩 Get strain cards (from orders)
+    const strainCards = await UserCard.find({
+      userId: user._id,
+      source: "order",
+    })
+      .populate("cardId", "name rarity imageUrl")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // ✅ Combine both
+    const allCards = [
+      ...strainCards.map((c) => ({
+        name: c.cardId?.name,
+        rarity: c.cardId?.rarity,
+        image: c.cardId?.imageUrl,
+        source: "order", // mark as Strain
+      })),
+      ...gameCards.map((c) => ({
+        name: c.name,
+        rarity: c.rarity,
+        image: c.imageUrl || null,
+        source: "game", // keep your existing cards normal
+      })),
+    ];
+
+    res.json({ success: true, cards: allCards });
+>>>>>>> e8497bc (🚀 Ban system update: auto logout + global enforce)
+  } catch (e) {
+    console.error("Fetch cards error:", e);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
 module.exports = router;
