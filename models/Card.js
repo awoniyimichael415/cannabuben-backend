@@ -11,6 +11,9 @@ const cardSchema = new mongoose.Schema(
     },
     coinsEarned: { type: Number, default: 0 },
 
+    // ✅ NEW: WooCommerce Product ID
+    productId: { type: Number, unique: true, sparse: true },
+
     // 🔹 New fields for admin catalog management
     imageUrl: { type: String, default: "" },
     active: { type: Boolean, default: true }, // admin can disable a card from drop pool
@@ -29,5 +32,4 @@ const cardSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Prevent model overwrite during hot-reload
 module.exports = mongoose.models.Card || mongoose.model("Card", cardSchema);

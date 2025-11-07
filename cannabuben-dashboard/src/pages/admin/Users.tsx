@@ -16,18 +16,17 @@ const AdminUsers: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [search, setSearch] = useState(""); // 🔍 quick filter
+  const [search, setSearch] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
 
-  /** 🔹 Fetch all users */
+  // 🔹 Fetch all users
   async function loadUsers() {
     try {
       setLoading(true);
       setError("");
       const token = getAdminToken();
       const res = await fetch(`${API_URL}/api/admin/users`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Failed to load users");
@@ -43,12 +42,16 @@ const AdminUsers: React.FC = () => {
     loadUsers();
   }, []);
 
-  /** 🔹 Update coins or ban/unban user */
+  // 🔹 Update coins or ban/unban
   async function updateUser(id: string, changes: Partial<User>) {
     try {
       setSavingId(id);
       const token = getAdminToken();
-      const res = await fetch(`${API_URL}/api/admin/users/${id}/coins`, {
+      
+      
+      const endpoint = `${API_URL}/api/admin/users/${id}/coins`;
+
+      const res = await fetch(endpoint, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -56,12 +59,24 @@ const AdminUsers: React.FC = () => {
         },
         body: JSON.stringify(changes),
       });
+
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Update failed");
 
+      // ✅ Update UI instantly
       setUsers((prev) =>
         prev.map((u) => (u._id === id ? { ...u, ...json.user } : u))
       );
+
+      // ✅ Nice feedback
+      if (changes.banned !== undefined) {
+        setToast(json.user?.banned ? "🚫 User banned successfully" : "✅ User unbanned successfully");
+      } else {
+        setToast("💰 Coins updated successfully");
+      }
+
+      // Auto hide toast
+      setTimeout(() => setToast(null), 2500);
     } catch (err: any) {
       alert("❌ " + err.message);
     } finally {
@@ -83,7 +98,6 @@ const AdminUsers: React.FC = () => {
         View, edit coin balance, or ban/unban users.
       </p>
 
-      {/* 🔍 Search Bar */}
       <input
         type="text"
         placeholder="Search user by email..."
@@ -156,6 +170,7 @@ const AdminUsers: React.FC = () => {
                     padding: "4px 8px",
                     cursor: "pointer",
                     fontSize: 13,
+                    minWidth: 70,
                   }}
                 >
                   {savingId === u._id
@@ -172,6 +187,26 @@ const AdminUsers: React.FC = () => {
 
       {filteredUsers.length === 0 && (
         <p style={{ textAlign: "center", marginTop: 20 }}>No users found</p>
+      )}
+
+      {/* ✅ Floating toast */}
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 20,
+            right: 20,
+            background: "#2E5632",
+            color: "#fff",
+            padding: "10px 16px",
+            borderRadius: 8,
+            boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+            fontWeight: 600,
+            zIndex: 1000,
+          }}
+        >
+          {toast}
+        </div>
       )}
     </div>
   );

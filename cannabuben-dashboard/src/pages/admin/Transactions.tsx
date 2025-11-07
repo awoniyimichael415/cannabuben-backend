@@ -12,6 +12,7 @@ interface TxItem {
     reward?: string;
     boxGranted?: boolean;
     cardsAwarded?: string[];
+    type?: string;
   };
   createdAt: string;
 }
@@ -20,7 +21,9 @@ const AdminTransactions: React.FC = () => {
   const [txs, setTxs] = useState<TxItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filter, setFilter] = useState<"all" | "earn" | "spend">("all");
+  const [filter, setFilter] = useState<
+    "all" | "earn" | "spend" | "reward_coupon" | "reward_item"
+  >("all");
   const [search, setSearch] = useState("");
 
   /** 🔹 Load transactions */
@@ -62,11 +65,13 @@ const AdminTransactions: React.FC = () => {
     .filter((t) => {
       if (filter === "earn") return t.coins > 0;
       if (filter === "spend") return t.coins < 0;
+      if (filter === "reward_coupon")
+        return t.meta?.source === "redeem" && t.meta?.type === "coupon";
+      if (filter === "reward_item")
+        return t.meta?.source === "redeem" && t.meta?.type === "item";
       return true;
     })
-    .filter((t) =>
-      t.userEmail.toLowerCase().includes(search.toLowerCase())
-    );
+    .filter((t) => t.userEmail.toLowerCase().includes(search.toLowerCase()));
 
   /** 🔹 Derived Metrics */
   const totalEarned = txs.filter((t) => t.coins > 0).reduce((a, b) => a + b.coins, 0);
@@ -97,21 +102,27 @@ const AdminTransactions: React.FC = () => {
       >
         <div>
           <strong>Filter: </strong>
-          {["all", "earn", "spend"].map((type) => (
+          {[
+            { key: "all", label: "All" },
+            { key: "earn", label: "Earnings" },
+            { key: "spend", label: "Spendings" },
+            { key: "reward_coupon", label: "Reward / Coupon" },
+            { key: "reward_item", label: "Reward / Item" },
+          ].map((btn) => (
             <button
-              key={type}
-              onClick={() => setFilter(type as any)}
+              key={btn.key}
+              onClick={() => setFilter(btn.key as any)}
               style={{
                 margin: "0 4px",
                 padding: "4px 8px",
                 borderRadius: 6,
                 border: "none",
                 cursor: "pointer",
-                background: filter === type ? "#2E5632" : "#ddd",
-                color: filter === type ? "#fff" : "#000",
+                background: filter === btn.key ? "#2E5632" : "#ddd",
+                color: filter === btn.key ? "#fff" : "#000",
               }}
             >
-              {type === "earn" ? "Earnings" : type === "spend" ? "Spendings" : "All"}
+              {btn.label}
             </button>
           ))}
         </div>
@@ -138,8 +149,12 @@ const AdminTransactions: React.FC = () => {
           marginBottom: 20,
         }}
       >
-        <div style={statCard}>Total Earned: <span style={{ color: "green" }}>+{totalEarned}</span></div>
-        <div style={statCard}>Total Spent: <span style={{ color: "red" }}>{totalSpent}</span></div>
+        <div style={statCard}>
+          Total Earned: <span style={{ color: "green" }}>+{totalEarned}</span>
+        </div>
+        <div style={statCard}>
+          Total Spent: <span style={{ color: "red" }}>{totalSpent}</span>
+        </div>
         <div style={statCard}>Total Records: {txs.length}</div>
       </div>
 
@@ -161,7 +176,12 @@ const AdminTransactions: React.FC = () => {
             {filteredTxs.map((t) => (
               <tr key={t._id}>
                 <td>{t.userEmail}</td>
-                <td style={{ color: t.coins >= 0 ? "green" : "red", fontWeight: 600 }}>
+                <td
+                  style={{
+                    color: t.coins >= 0 ? "green" : "red",
+                    fontWeight: 600,
+                  }}
+                >
                   {t.coins}
                 </td>
                 <td>{t.meta?.source || "—"}</td>

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import "../styles/dashboard.css";
-import { apiGet } from "../lib/api";
+import { apiGet, API_URL } from "../lib/api"; // ✅ import API_URL
 import { clearSession, getEmail, isLoggedIn } from "../lib/auth";
 
 // Assets
@@ -67,42 +67,13 @@ const Dashboard: React.FC = () => {
   function getCardThumb(c: CardItem, i: number): string {
     if (c?.image) return c.image;
     const id = c.cardId ?? i + 1;
-    switch (id) {
-      case 1: return card1;
-      case 2: return card2;
-      case 3: return card3;
-      case 4: return card4;
-      case 5: return card5;
-      case 6: return card6;
-      case 7: return card7;
-      case 8: return card8;
-      case 9: return card9;
-      case 10: return card10;
-      case 11: return card11;
-      case 12: return card12;
-      case 13: return card13;
-      case 14: return card14;
-      case 15: return card15;
-      case 16: return card16;
-      case 17: return card17;
-      case 18: return card18;
-      case 19: return card19;
-      case 20: return card20;
-      case 21: return card21;
-      case 22: return card22;
-      case 23: return card23;
-      case 24: return card24;
-      case 25: return card25;
-      case 26: return card26;
-      case 27: return card27;
-      case 28: return card28;
-      case 29: return card29;
-      case 30: return card30;
-      case 31: return card31;
-      case 32: return card32;
-      case 33: return card33;
-      default: return cardBack;
-    }
+    const CARD_IMAGES: Record<number, string> = {
+      1: card1, 2: card2, 3: card3, 4: card4, 5: card5, 6: card6, 7: card7, 8: card8, 9: card9,
+      10: card10, 11: card11, 12: card12, 13: card13, 14: card14, 15: card15, 16: card16, 17: card17,
+      18: card18, 19: card19, 20: card20, 21: card21, 22: card22, 23: card23, 24: card24, 25: card25,
+      26: card26, 27: card27, 28: card28, 29: card29, 30: card30, 31: card31, 32: card32, 33: card33
+    };
+    return CARD_IMAGES[id] || cardBack;
   }
 
   useEffect(() => {
@@ -112,20 +83,24 @@ const Dashboard: React.FC = () => {
         setErr("");
 
         let currentCoins: number | null = null;
+
         if (isLoggedIn()) {
           const res = await apiGet("/api/auth/me");
           const json = await res.json();
           if (res.ok && json?.success) currentCoins = json.user?.coins ?? 0;
         }
+
         if (currentCoins === null && email) {
-          const r = await fetch(`https://cannabuben-backend-fkxi.onrender.com/api/user?email=${encodeURIComponent(email)}`);
+          // ✅ Fetch user details using environment API_URL
+          const r = await fetch(`${API_URL}/api/user?email=${encodeURIComponent(email)}`);
           const j = await r.json();
           currentCoins = j.coins ?? 0;
         }
         setCoins(currentCoins ?? 0);
 
         if (email) {
-          const cr = await fetch(`https://cannabuben-backend-fkxi.onrender.com/api/cards?email=${encodeURIComponent(email)}`);
+          // ✅ Fetch user cards using environment API_URL
+          const cr = await fetch(`${API_URL}/api/box?email=${encodeURIComponent(email)}`);
           const cj = await cr.json();
           if (cr.ok && cj?.success) setCards(cj.cards || []);
         }
@@ -160,7 +135,6 @@ const Dashboard: React.FC = () => {
           <NavLink to="/cards" className={({ isActive }) => "sidelink" + (isActive ? " active" : "")}>
             <span className="icon">🃏</span> Cards
           </NavLink>
-          {/* ✅ New Profile link */}
           <NavLink to="/profile" className={({ isActive }) => "sidelink" + (isActive ? " active" : "")}>
             <span className="icon">👤</span> Profile
           </NavLink>
@@ -180,7 +154,6 @@ const Dashboard: React.FC = () => {
 
       {/* MAIN */}
       <main className="grovi-main">
-        {/* TOP NAV WITH LOGO */}
         <div className="grovi-topnav">
           <div className="grovi-top-logo">
             <img src={logo} alt="CannaBuben" />
@@ -194,7 +167,6 @@ const Dashboard: React.FC = () => {
           <NavLink to="/cards" className={({ isActive }) => (isActive ? "toplink active" : "toplink")}>
             Cards
           </NavLink>
-          {/* ✅ Added Profile link to top bar */}
           <NavLink to="/profile" className={({ isActive }) => (isActive ? "toplink active" : "toplink")}>
             Profile
           </NavLink>
@@ -253,7 +225,6 @@ const Dashboard: React.FC = () => {
           <section className="panel mycards">
             <div className="panel-inner">
               <h3 className="panel-title">My Cards</h3>
-
               <div className="cards-grid">
                 {recentSix.length === 0 && (
                   <div className="muted" style={{ gridColumn: "1/-1" }}>

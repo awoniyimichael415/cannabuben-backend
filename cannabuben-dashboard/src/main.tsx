@@ -13,6 +13,8 @@ import Cards from "./pages/Cards";
 import Rewards from "./pages/Rewards";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
+import BanWatcher from "./components/BanWatcher";
+import { Toaster } from "react-hot-toast";
 
 
 // ===== ADMIN PAGES =====
@@ -115,6 +117,10 @@ const router = createBrowserRouter([
 // ==========================================================
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
+    {/* toast provider (optional) */}
+    <Toaster />
+    {/* global ban watcher (runs in background) */}
+    <BanWatcher />
     <RouterProvider router={router} />
   </React.StrictMode>
 );

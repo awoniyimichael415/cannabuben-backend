@@ -12,22 +12,30 @@ const Games: React.FC = () => {
   const email = getEmail() || "";
   const [coins, setCoins] = useState<number | null>(null);
 
-  useEffect(() => {
-    async function loadCoins() {
-      try {
-        let currentCoins: number | null = null;
-        if (isLoggedIn()) {
-          const res = await apiGet("/api/auth/me");
-          const json = await res.json();
-          if (res.ok && json?.success) currentCoins = json.user?.coins ?? 0;
-        }
-        setCoins(currentCoins ?? 0);
-      } catch (e) {
-        console.error(e);
+useEffect(() => {
+  async function loadCoins() {
+    try {
+      if (!email) return;
+
+      // ✅ Always use the backend API (same as Profile)
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/user?email=${encodeURIComponent(email)}`
+      );
+      const json = await res.json();
+      if (res.ok) {
+        setCoins(json.coins ?? 0);
+      } else {
+        setCoins(0);
       }
+    } catch (e) {
+      console.error("Failed to load coins:", e);
+      setCoins(0);
     }
-    loadCoins();
-  }, []);
+  }
+
+  loadCoins();
+}, [email]);
+
 
   return (
     <main className="grovi-main">

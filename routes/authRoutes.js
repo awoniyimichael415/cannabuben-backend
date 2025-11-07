@@ -45,6 +45,13 @@ router.post("/login", async (req, res) => {
 
     const emailLc = String(email).toLowerCase().trim();
     const user = await User.findOne({ email: emailLc });
+    if (user && user.banned) {
+      return res.status(403).json({
+        success: false,
+        error: "Your account has been banned. Please contact support.",
+      });
+    }
+
     if (!user) return res.status(404).json({ error: "User not found" });
 
     if (!user.password) return res.status(400).json({ error: "No password set. Please register first." });
@@ -59,6 +66,23 @@ router.post("/login", async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 });
+
+// ✅ Check-ban endpoint (for auto logout when banned)
+router.get("/check-ban", async (req, res) => {
+  try {
+    const email = req.query.email?.toLowerCase();
+    if (!email) return res.status(400).json({ banned: false });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.json({ banned: false });
+
+    return res.json({ banned: !!user.banned });
+  } catch (err) {
+    console.error("Check-ban error:", err);
+    return res.status(500).json({ banned: false });
+  }
+});
+
 
 // Me (get current user by token)
 router.get("/me", async (req, res) => {

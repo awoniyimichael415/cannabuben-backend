@@ -3,24 +3,24 @@ import { API_URL } from "../../lib/api";
 import { getAdminToken } from "../../lib/adminAuth";
 
 interface Card {
-  _id: string;
+  _id?: string;
   name: string;
   rarity: string;
   coinsEarned: number;
   imageUrl?: string;
+  productId?: number;
   active?: boolean;
   createdAt?: string;
 }
 
 const AdminCards: React.FC = () => {
   const [cards, setCards] = useState<Card[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [form, setForm] = useState<Partial<Card>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const token = getAdminToken();
 
-  // 🔹 Fetch all cards
   async function loadCards() {
     try {
       setLoading(true);
@@ -37,31 +37,43 @@ const AdminCards: React.FC = () => {
     }
   }
 
-  useEffect(() => {
-    loadCards();
-  }, []);
+  useEffect(() => { loadCards(); }, []);
 
-  // 🔹 Create or update a card
+  async function uploadImage(file: File): Promise<string> {
+    const data = new FormData();
+    data.append("image", file);
+    const res = await fetch(`${API_URL}/api/admin/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: data,
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || "Upload failed");
+    return json.url;
+  }
+
   async function saveCard(e: React.FormEvent) {
     e.preventDefault();
     try {
+      let imgUrl = form.imageUrl || "";
+      if ((form as any).file instanceof File) {
+        imgUrl = await uploadImage((form as any).file);
+      }
+      const payload = { ...form, imageUrl: imgUrl };
       const method = editingId ? "PUT" : "POST";
       const url = editingId
         ? `${API_URL}/api/admin/cards/${editingId}`
         : `${API_URL}/api/admin/cards`;
-
       const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
-
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Save failed");
-
       setForm({});
       setEditingId(null);
       loadCards();
@@ -71,7 +83,6 @@ const AdminCards: React.FC = () => {
     }
   }
 
-  // 🔹 Delete a card
   async function deleteCard(id: string) {
     if (!confirm("Delete this card?")) return;
     try {
@@ -87,17 +98,12 @@ const AdminCards: React.FC = () => {
     }
   }
 
-  // 🔹 UI
   return (
     <div className="admin-page">
-      <h2>🃏 Card Management</h2>
-      <p style={{ color: "#555", marginBottom: 12 }}>
-        Manage card catalog (create, edit, delete).
-      </p>
+      <h2>🃏 Strain Card Management</h2>
 
-      {/* === Add / Edit Form === */}
       <form onSubmit={saveCard} style={{ marginBottom: 24 }}>
-        <h4>{editingId ? "✏️ Edit Card" : "➕ Add New Card"}</h4>
+        <h4>{editingId ? "✏️ Edit Card" : "➕ Add New Strain Card"}</h4>
 
         <input
           placeholder="Card Name"
@@ -123,10 +129,21 @@ const AdminCards: React.FC = () => {
           required
         />
 
+        {/* NEW FIELD: WooCommerce product ID */}
         <input
-          placeholder="Image URL (optional)"
-          value={form.imageUrl || ""}
-          onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+          type="number"
+          placeholder="WooCommerce Product ID"
+          value={form.productId || ""}
+          onChange={(e) =>
+            setForm({ ...form, productId: Number(e.target.value) })
+          }
+          required
+        />
+
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setForm({ ...form, file: e.target.files?.[0] })}
         />
 
         <label style={{ marginLeft: 10 }}>
@@ -153,16 +170,16 @@ const AdminCards: React.FC = () => {
       {loading && <p>Loading cards...</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {!loading && !error && cards.length > 0 && (
+      {!loading && cards.length > 0 && (
         <table className="admin-table">
           <thead>
             <tr>
-              <th>Card</th>
+              <th>Name</th>
               <th>Rarity</th>
               <th>Coins</th>
+              <th>Product ID</th>
               <th>Image</th>
               <th>Active</th>
-              <th>Created</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -172,6 +189,7 @@ const AdminCards: React.FC = () => {
                 <td>{c.name}</td>
                 <td>{c.rarity}</td>
                 <td>{c.coinsEarned}</td>
+                <td>{c.productId || "—"}</td>
                 <td>
                   {c.imageUrl ? (
                     <img
@@ -185,29 +203,13 @@ const AdminCards: React.FC = () => {
                 </td>
                 <td>{c.active ? "✅" : "❌"}</td>
                 <td>
-                  {c.createdAt
-                    ? new Date(c.createdAt).toLocaleDateString()
-                    : "—"}
-                </td>
-                <td>
-                  <button
-                    onClick={() => {
-                      setForm(c);
-                      setEditingId(c._id);
-                    }}
-                  >
-                    ✏️
-                  </button>
-                  <button onClick={() => deleteCard(c._id)}>🗑️</button>
+                  <button onClick={() => { setForm(c); setEditingId(c._id!); }}>✏️</button>
+                  <button onClick={() => deleteCard(c._id!)}>🗑️</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      )}
-
-      {!loading && !error && cards.length === 0 && (
-        <p>No cards found. Add one above!</p>
       )}
     </div>
   );

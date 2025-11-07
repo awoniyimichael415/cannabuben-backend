@@ -1,3 +1,7 @@
+const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
+const streamifier = require("streamifier");
+
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
@@ -7,6 +11,15 @@ const Card = require("../models/Card");
 const Reward = require("../models/Reward");
 const SpinConfig = require("../models/SpinConfig");
 const BoxConfig = require("../models/BoxConfig");
+const ProductCardMap = require("../models/ProductCardMap");
+const UserCard = require("../models/UserCard");
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 
 const Tx =
   mongoose.models.Tx ||
@@ -296,44 +309,57 @@ router.delete("/cards/:id", requireAdmin, async (req, res) => {
 // 🃏 CARD MANAGEMENT
 // ======================
 
-// 🔹 Get all cards
-router.get("/cards", async (req, res) => {
+// ✅ Fetch all cards and include WooCommerce productId if mapped
+router.get("/cards", requireAdmin, async (req, res) => {
   try {
-    const cards = await Card.find().sort({ createdAt: -1 });
-    res.json({ success: true, cards });
+    // Get all cards
+    const cards = await Card.find().sort({ createdAt: -1 }).lean();
+
+    // Get all product mappings
+    const mappings = await ProductCardMap.find().lean();
+
+    // Merge productId into card data
+    const mergedCards = cards.map(card => {
+      const match = mappings.find(m => m.cardId?.toString() === card._id.toString());
+      return {
+        ...card,
+        productId: match ? match.productId : null, // attach the Woo productId
+      };
+    });
+
+    res.json({ success: true, cards: mergedCards });
   } catch (err) {
-    console.error("Error fetching cards:", err);
+    console.error("Error fetching cards with mapping:", err);
     res.status(500).json({ success: false, error: "Failed to load cards" });
   }
 });
 
-// 🔹 Create a new card
-router.post("/cards", async (req, res) => {
+
+// CREATE new card + auto-link WooCommerce product ID
+router.post("/cards", requireAdmin, async (req, res) => {
   try {
-    const { name, rarity, imageUrl, description, category, active } = req.body;
-    if (!name) {
-      return res
-        .status(400)
-        .json({ success: false, error: "Card name is required" });
+    const card = await Card.create(req.body);
+
+    // 🧩 Automatically create or update product→card mapping
+    if (card.productId) {
+      await ProductCardMap.findOneAndUpdate(
+        { productId: card.productId },
+        {
+          cardId: card._id,
+          title: card.name,
+          active: true,
+        },
+        { upsert: true, new: true }
+      );
     }
 
-    const newCard = new Card({
-      name,
-      rarity,
-      imageUrl,
-      description,
-      category,
-      active,
-      obtainedFrom: "admin",
-    });
-
-    await newCard.save();
-    res.json({ success: true, card: newCard });
+    res.json({ success: true, card });
   } catch (err) {
-    console.error("Error creating card:", err);
+    console.error("Create card error:", err);
     res.status(500).json({ success: false, error: "Failed to create card" });
   }
 });
+
 
 // 🔹 Update an existing card
 router.put("/cards/:id", async (req, res) => {
@@ -545,7 +571,6 @@ router.put("/games", requireAdmin, async (req, res) => {
       .json({ success: false, error: "Failed to update game config" });
   }
 });
-
 
 
 /* =====================================================
@@ -799,6 +824,102 @@ router.post("/redeem", async (req, res) => {
   } catch (err) {
     console.error("Redeem error:", err);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+/* =====================================================
+   🧩 Product → Card Mapping (WooCommerce Strain Integration)
+===================================================== */
+
+// 🔹 List all product-card mappings
+router.get("/cards/mappings", requireAdmin, async (req, res) => {
+  try {
+    const maps = await ProductCardMap.find()
+      .populate("cardId", "name rarity imageUrl")
+      .sort({ createdAt: -1 });
+    res.json({ success: true, maps });
+  } catch (err) {
+    console.error("List mappings error:", err);
+    res.status(500).json({ success: false, error: "Failed to load mappings" });
+  }
+});
+
+// 🔹 Create new mapping
+router.post("/cards/mappings", requireAdmin, async (req, res) => {
+  try {
+    const { productId, cardId, title, active = true } = req.body || {};
+    if (!productId || !cardId) {
+      return res
+        .status(400)
+        .json({ success: false, error: "productId and cardId required" });
+    }
+
+    const map = await ProductCardMap.create({ productId, cardId, title, active });
+    const out = await map.populate("cardId", "name rarity imageUrl");
+
+    res.json({ success: true, map: out });
+  } catch (err) {
+    console.error("Create mapping error:", err);
+    const msg =
+      err.code === 11000
+        ? "Mapping for this productId already exists"
+        : "Failed to create mapping";
+    res.status(500).json({ success: false, error: msg });
+  }
+});
+
+// 🔹 Update mapping
+router.put("/cards/mappings/:id", requireAdmin, async (req, res) => {
+  try {
+    const map = await ProductCardMap.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    }).populate("cardId", "name rarity imageUrl");
+
+    if (!map)
+      return res.status(404).json({ success: false, error: "Mapping not found" });
+
+    res.json({ success: true, map });
+  } catch (err) {
+    console.error("Update mapping error:", err);
+    res.status(500).json({ success: false, error: "Failed to update mapping" });
+  }
+});
+
+// 🔹 Delete mapping
+router.delete("/cards/mappings/:id", requireAdmin, async (req, res) => {
+  try {
+    await ProductCardMap.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Delete mapping error:", err);
+    res.status(500).json({ success: false, error: "Failed to delete mapping" });
+  }
+});
+
+
+/* =====================================================
+   📤 Admin Upload Card Image to Cloudinary
+===================================================== */
+const upload = multer({ storage: multer.memoryStorage() });
+
+router.post("/upload", requireAdmin, upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, error: "No file uploaded" });
+
+    const folder = process.env.CLOUDINARY_FOLDER || "cannabuben_cards";
+
+    const result = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { folder },
+        (error, result) => (error ? reject(error) : resolve(result))
+      );
+      streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+    });
+
+    res.json({ success: true, url: result.secure_url });
+  } catch (err) {
+    console.error("Cloudinary upload error:", err);
+    res.status(500).json({ success: false, error: "Upload failed" });
   }
 });
 

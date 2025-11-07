@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const User = require("../models/User");
 const Card = require("../models/Card");
+const UserCard = require("../models/UserCard");
 const Tx = require("../models/Tx");
 const BoxConfig = require("../models/BoxConfig");
 const { requireAuth } = require("../utils/auth");
@@ -202,26 +203,6 @@ router.post("/fuse", requireAuth, async (req, res) => {
   } catch (e) {
     console.error("Fuse error:", e);
     res.status(500).json({ error: "Server error" });
-  }
-});
-
-/* ============================================================
-   🃏 GET USER CARDS (for Dashboard & Cards pages)
-============================================================ */
-router.get("/", async (req, res) => {
-  try {
-    const { email } = req.query;
-    if (!email) return res.status(400).json({ success: false, error: "Email is required" });
-
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ success: false, error: "User not found" });
-
-    const cards = await Card.find({ userId: user._id }).sort({ createdAt: -1 });
-
-    res.json({ success: true, cards });
-  } catch (e) {
-    console.error("Fetch cards error:", e);
-    res.status(500).json({ success: false, error: "Server error" });
   }
 });
 
