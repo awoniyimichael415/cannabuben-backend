@@ -134,7 +134,7 @@ app.post("/webhook/woocommerce", async (req, res) => {
     ====================================================== */
     if (Array.isArray(order.line_items)) {
       for (const item of order.line_items) {
-        const productId = Number(item.product_id);
+        const productId = Number(item.variation_id || item.product_id);
         if (!productId) continue;
 
         // find mapped strain card
