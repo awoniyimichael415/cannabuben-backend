@@ -132,35 +132,60 @@ app.post("/webhook/woocommerce", async (req, res) => {
     /* =====================================================
        🎴 Reward Strain Cards for Each Product
     ====================================================== */
-    if (Array.isArray(order.line_items)) {
-      for (const item of order.line_items) {
-        const productId = Number(item.variation_id || item.product_id);
-        if (!productId) continue;
+if (Array.isArray(order.line_items)) {
+  for (const item of order.line_items) {
+    try {
+      // raw ids from webhook (strings/numbers)
+      const parentProductId = Number(item.product_id || 0);    // parent product id (simple product or parent of variation)
+      const variationId = Number(item.variation_id || 0);     // variation id (0 if none)
 
-        // find mapped strain card
-        const mapping = await ProductCardMap.findOne({ productId, active: true })
-          .populate("cardId", "name rarity imageUrl");
+      console.log("✅ Woo Item:", {
+        name: item.name,
+        product_id: item.product_id,
+        variation_id: item.variation_id,
+        sku: item.sku,
+        quantity: item.quantity,
+      });
 
-        if (mapping && mapping.cardId) {
-          // create a userCard record
-          await UserCard.create({
-            userId: user._id,
-            cardId: mapping.cardId._id,
-            source: "order",
-            meta: { orderId, productId, note: `Bought ${item.name}` },
-          });
+      // choose lookup order: parentProductId first (so one mapping covers all variants),
+      // then try variationId if parent mapping not found.
+      const queryCandidates = [];
 
-          console.log(`🎴 Added strain card "${mapping.cardId.name}" to ${billingEmail}`);
-        }
+      if (parentProductId) queryCandidates.push({ productId: parentProductId });
+      if (variationId) queryCandidates.push({ productId: variationId });
+
+      // Also try to match by string form (in case DB stored string)
+      if (parentProductId) queryCandidates.push({ productId: String(parentProductId) });
+      if (variationId) queryCandidates.push({ productId: String(variationId) });
+
+      // find mapping by any of these (first match)
+      const mapping = await ProductCardMap.findOne({
+        $or: queryCandidates,
+        active: true,
+      }).populate("cardId", "name rarity imageUrl");
+
+      if (mapping && mapping.cardId) {
+        // create a userCard record
+        await UserCard.create({
+          userId: user._id,
+          cardId: mapping.cardId._id,
+          source: "order",
+          meta: { orderId, productId: parentProductId || variationId, note: `Bought ${item.name}` },
+        });
+
+        console.log(
+          `🎴 Added strain card "${mapping.cardId.name}" to ${billingEmail} (mapped product ${mapping.productId})`
+        );
+      } else {
+        console.log(
+          `⚠️ No mapping found for product ${parentProductId} (variation ${variationId}) - skipping card`
+        );
       }
+    } catch (err) {
+      console.error("Error processing order line item:", err);
     }
-
-    return res.status(200).send("OK");
-  } catch (err) {
-    console.error("❌ Webhook error:", err);
-    return res.status(500).send("Server error");
   }
-});
+}
 
 
 /* =====================================================
