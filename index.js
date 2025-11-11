@@ -82,23 +82,19 @@ function verifyWooSignature(req) {
 ===================================================== */
 app.post("/webhook/woocommerce", async (req, res) => {
   try {
-    console.log("\n==================== NEW WOO WEBHOOK ====================");
-    
-    // ✅ Safe body extraction
-    const order = req.body || {};
-
-    console.log("STATUS:", order.status || order.order_status);
-    console.log("EMAIL:", order?.billing?.email);
-    console.log("ORDER ID:", order.id);
-    console.log("LINE ITEMS:", order.line_items);
-    console.log("FULL PAYLOAD:", JSON.stringify(order, null, 2));
-    console.log("===========================================================\n");
-
-    // ✅ Verify signature AFTER we log (for debugging)
     if (!verifyWooSignature(req)) {
       console.warn("⚠️ Invalid WooCommerce signature");
       return res.status(401).send("Invalid signature");
     }
+
+    const order = req.body;
+
+    console.log("\n==================== NEW WOO WEBHOOK ====================");
+    console.log("STATUS:", order.status || order.order_status);
+    console.log("EMAIL:", order.billing?.email);
+    console.log("ORDER ID:", order.id);
+    console.log("LINE ITEMS:", order.line_items);
+    console.log("===========================================================\n");
 
     const status = order.status || order.order_status || "";
     if (status !== "completed") {
@@ -106,7 +102,7 @@ app.post("/webhook/woocommerce", async (req, res) => {
       return res.status(200).send("Ignored");
     }
 
-    const total = parseFloat(order.total || order.total_price || 0);
+    const total = parseFloat(order.total || "0");
     const coinsToAdd = Math.floor(total);
 
     const billingEmail =
@@ -115,7 +111,7 @@ app.post("/webhook/woocommerce", async (req, res) => {
       order.billing_email ||
       null;
 
-    const wcCustomerId = order.customer_id || String(order.customer_id || "");
+    const wcCustomerId = order.customer_id;
     const orderId = String(order.id || order.order_number || "UNKNOWN");
 
     if (!billingEmail) {
@@ -130,15 +126,14 @@ app.post("/webhook/woocommerce", async (req, res) => {
     }
 
     user.coins += coinsToAdd;
-    user.wcCustomerId = user.wcCustomerId || wcCustomerId;
     await user.save();
 
-    // ✅ Record transaction (coins)
+    // ✅ Save transaction
     await Tx.create({
       userId: user._id,
       orderId,
       coins: coinsToAdd,
-      meta: { source: "woocommerce", total, rawOrder: order },
+      meta: { source: "woocommerce", total },
     });
 
     console.log(`✅ ${billingEmail} credited +${coinsToAdd} coins (Order ${orderId})`);
@@ -146,31 +141,27 @@ app.post("/webhook/woocommerce", async (req, res) => {
     /* =====================================================
        🎴 Reward Strain Cards for Each Product
     ====================================================== */
-    if (Array.isArray(order.line_items)) {
-      for (const item of order.line_items) {
-        // ✅ ✅ The FIX: ONLY use main product ID (no variation ID)
-        const productId = Number(item.product_id);
+    for (const item of order.line_items) {
+      const productId = Number(item.product_id); // ✅ we use ONLY product ID (not variant)
 
-        console.log(`🔍 Checking Product ID: ${productId} (from: ${item.name})`);
+      // ✅ Find product → card mapping
+      const mapping = await ProductCardMap.findOne({ productId, active: true })
+        .populate("cardId", "name rarity imageUrl");
 
-        if (!productId) continue;
-
-        const mapping = await ProductCardMap.findOne({ productId, active: true })
-          .populate("cardId", "name rarity imageUrl");
-
-        if (mapping && mapping.cardId) {
-          await UserCard.create({
-            userId: user._id,
-            cardId: mapping.cardId._id,
-            source: "order",
-            meta: { orderId, productId, note: `Bought ${item.name}` },
-          });
-
-          console.log(`🎴 Strain Card Rewarded → "${mapping.cardId.name}" ✅`);
-        } else {
-          console.log(`⚠️ No mapping found for Product ID ${productId}`);
-        }
+      if (!mapping) {
+        console.log(`⚠️ No card mapping found for Product ID: ${productId}`);
+        continue;
       }
+
+      // ✅ Create card record
+      await UserCard.create({
+        userId: user._id,
+        cardId: mapping.cardId._id,
+        source: "order",
+        meta: { orderId, productId, note: `Bought ${item.name}` },
+      });
+
+      console.log(`🎴 Card rewarded: ${mapping.cardId.name} → ${billingEmail}`);
     }
 
     return res.status(200).send("OK");
