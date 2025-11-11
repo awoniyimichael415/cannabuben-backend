@@ -82,6 +82,14 @@ function verifyWooSignature(req) {
 ===================================================== */
 app.post("/webhook/woocommerce", async (req, res) => {
   try {
+    console.log("\n==================== NEW WOO WEBHOOK ====================");
+    console.log("STATUS:", req.body.status || req.body.order_status);
+    console.log("EMAIL:", req.body?.billing?.email);
+    console.log("ORDER ID:", req.body.id);
+    console.log("LINE ITEMS:", req.body.line_items);
+    console.log("FULL PAYLOAD:", JSON.stringify(req.body, null, 2));
+    console.log("===========================================================\n");
+
     if (!verifyWooSignature(req)) {
       console.warn("⚠️ Invalid WooCommerce signature");
       return res.status(401).send("Invalid signature");
@@ -128,6 +136,7 @@ app.post("/webhook/woocommerce", async (req, res) => {
     });
 
     console.log(`✅ ${billingEmail} credited +${coinsToAdd} coins (Order ${orderId})`);
+
 
     /* =====================================================
        🎴 Reward Strain Cards for Each Product
