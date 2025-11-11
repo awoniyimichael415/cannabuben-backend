@@ -83,19 +83,23 @@ function verifyWooSignature(req) {
 app.post("/webhook/woocommerce", async (req, res) => {
   try {
     console.log("\n==================== NEW WOO WEBHOOK ====================");
-    console.log("STATUS:", req.body.status || req.body.order_status);
-    console.log("EMAIL:", req.body?.billing?.email);
-    console.log("ORDER ID:", req.body.id);
-    console.log("LINE ITEMS:", req.body.line_items);
-    console.log("FULL PAYLOAD:", JSON.stringify(req.body, null, 2));
+    
+    // ✅ Safe body extraction
+    const order = req.body || {};
+
+    console.log("STATUS:", order.status || order.order_status);
+    console.log("EMAIL:", order?.billing?.email);
+    console.log("ORDER ID:", order.id);
+    console.log("LINE ITEMS:", order.line_items);
+    console.log("FULL PAYLOAD:", JSON.stringify(order, null, 2));
     console.log("===========================================================\n");
 
+    // ✅ Verify signature AFTER we log (for debugging)
     if (!verifyWooSignature(req)) {
       console.warn("⚠️ Invalid WooCommerce signature");
       return res.status(401).send("Invalid signature");
     }
 
-    const order = req.body;
     const status = order.status || order.order_status || "";
     if (status !== "completed") {
       console.log("🕓 Ignored non-completed order");
@@ -104,11 +108,13 @@ app.post("/webhook/woocommerce", async (req, res) => {
 
     const total = parseFloat(order.total || order.total_price || 0);
     const coinsToAdd = Math.floor(total);
+
     const billingEmail =
       order.billing?.email ||
       order.customer_email ||
       order.billing_email ||
       null;
+
     const wcCustomerId = order.customer_id || String(order.customer_id || "");
     const orderId = String(order.id || order.order_number || "UNKNOWN");
 
@@ -137,21 +143,22 @@ app.post("/webhook/woocommerce", async (req, res) => {
 
     console.log(`✅ ${billingEmail} credited +${coinsToAdd} coins (Order ${orderId})`);
 
-
     /* =====================================================
        🎴 Reward Strain Cards for Each Product
     ====================================================== */
     if (Array.isArray(order.line_items)) {
       for (const item of order.line_items) {
+        // ✅ ✅ The FIX: ONLY use main product ID (no variation ID)
         const productId = Number(item.product_id);
+
+        console.log(`🔍 Checking Product ID: ${productId} (from: ${item.name})`);
+
         if (!productId) continue;
 
-        // find mapped strain card
         const mapping = await ProductCardMap.findOne({ productId, active: true })
           .populate("cardId", "name rarity imageUrl");
 
         if (mapping && mapping.cardId) {
-          // create a userCard record
           await UserCard.create({
             userId: user._id,
             cardId: mapping.cardId._id,
@@ -159,7 +166,9 @@ app.post("/webhook/woocommerce", async (req, res) => {
             meta: { orderId, productId, note: `Bought ${item.name}` },
           });
 
-          console.log(`🎴 Added strain card "${mapping.cardId.name}" to ${billingEmail}`);
+          console.log(`🎴 Strain Card Rewarded → "${mapping.cardId.name}" ✅`);
+        } else {
+          console.log(`⚠️ No mapping found for Product ID ${productId}`);
         }
       }
     }
@@ -170,6 +179,7 @@ app.post("/webhook/woocommerce", async (req, res) => {
     return res.status(500).send("Server error");
   }
 });
+
 
 
 /* =====================================================
