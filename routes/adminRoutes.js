@@ -261,136 +261,151 @@ router.delete("/rewards/:id", requireAdmin, async (req, res) => {
 });
 
 /* =====================================================
-   🃏 Cards Management (Full CRUD)
+   🃏 Strain Cards (Full CRUD + Product → Card Mapping)
+   REPLACE existing /cards and mapping related blocks with this single block.
 ===================================================== */
-// GET all cards
+
+const safeCardFields = (body = {}) => {
+  const out = {};
+  if (typeof body.name === "string") out.name = body.name;
+  if (typeof body.rarity === "string") out.rarity = body.rarity;
+  if (typeof body.coinsEarned !== "undefined") out.coinsEarned = Number(body.coinsEarned) || 0;
+  // Accept null/empty to allow removing a mapping
+  if (typeof body.productId !== "undefined" && body.productId !== "") {
+    out.productId = body.productId === null ? null : Number(body.productId);
+  }
+  if (typeof body.imageUrl === "string") out.imageUrl = body.imageUrl;
+  if (typeof body.active === "boolean") out.active = body.active;
+  if (typeof body.description === "string") out.description = body.description;
+  if (typeof body.category === "string") out.category = body.category;
+  if (typeof body.obtainedFrom === "string") out.obtainedFrom = body.obtainedFrom;
+  return out;
+}
+
+/* ---------------------------
+   GET /api/admin/cards
+   returns all cards with productId filled from mapping OR card.productId
+   (so admin table always shows product id)
+   --------------------------- */
 router.get("/cards", requireAdmin, async (req, res) => {
   try {
-    const cards = await Card.find().sort({ createdAt: -1 });
-    res.json({ success: true, cards });
-  } catch (err) {
-    res.status(500).json({ success: false, error: "Failed to load cards" });
-  }
-});
-
-// CREATE new card
-router.post("/cards", requireAdmin, async (req, res) => {
-  try {
-    const card = await Card.create(req.body);
-    res.json({ success: true, card });
-  } catch (err) {
-    res.status(500).json({ success: false, error: "Failed to create card" });
-  }
-});
-
-// UPDATE card by ID
-router.put("/cards/:id", requireAdmin, async (req, res) => {
-  try {
-    const card = await Card.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!card) return res.status(404).json({ success: false, error: "Card not found" });
-    res.json({ success: true, card });
-  } catch (err) {
-    res.status(500).json({ success: false, error: "Failed to update card" });
-  }
-});
-
-// DELETE card by ID
-router.delete("/cards/:id", requireAdmin, async (req, res) => {
-  try {
-    const card = await Card.findByIdAndDelete(req.params.id);
-    if (!card) return res.status(404).json({ success: false, error: "Card not found" });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: "Failed to delete card" });
-  }
-});
-
-// ======================
-// 🃏 CARD MANAGEMENT
-// ======================
-
-// ✅ Fetch all cards and include WooCommerce productId if mapped
-router.get("/cards", requireAdmin, async (req, res) => {
-  try {
-    // Get all cards
     const cards = await Card.find().sort({ createdAt: -1 }).lean();
-
-    // Get all product mappings
     const mappings = await ProductCardMap.find().lean();
 
-    // Merge productId into card data
-    const mergedCards = cards.map(card => {
-      const match = mappings.find(m => m.cardId?.toString() === card._id.toString());
-      return {
-        ...card,
-        productId: match ? match.productId : null, // attach the Woo productId
-      };
+    const merged = cards.map((card) => {
+      const match = mappings.find((m) => String(m.cardId) === String(card._id));
+      return { ...card, productId: match ? match.productId : (card.productId ?? null) };
     });
 
-    res.json({ success: true, cards: mergedCards });
+    res.json({ success: true, cards: merged });
   } catch (err) {
-    console.error("Error fetching cards with mapping:", err);
+    console.error("GET /api/admin/cards error:", err && err.stack ? err.stack : err);
     res.status(500).json({ success: false, error: "Failed to load cards" });
   }
 });
 
-
-// CREATE new card + auto-link WooCommerce product ID
+/* ---------------------------
+   POST /api/admin/cards
+   Create a card and create mapping if productId provided
+   --------------------------- */
 router.post("/cards", requireAdmin, async (req, res) => {
   try {
-    const card = await Card.create(req.body);
+    const data = safeCardFields(req.body);
+    if (!data.name) return res.status(400).json({ success: false, error: "Card name required" });
 
-    // 🧩 Automatically create or update product→card mapping
-    if (card.productId) {
+    const card = await Card.create(data);
+
+    // If card.productId exists (admin supplied), ensure mapping points to this card
+    if (card.productId != null) {
       await ProductCardMap.findOneAndUpdate(
         { productId: card.productId },
-        {
-          cardId: card._id,
-          title: card.name,
-          active: true,
-        },
+        { productId: card.productId, cardId: card._id, title: card.name, active: true },
         { upsert: true, new: true }
       );
     }
 
     res.json({ success: true, card });
   } catch (err) {
-    console.error("Create card error:", err);
-    res.status(500).json({ success: false, error: "Failed to create card" });
+    console.error("POST /api/admin/cards error:", err && err.stack ? err.stack : err);
+    if (err && err.code === 11000) {
+      return res.status(400).json({ success: false, error: "Duplicate key error (productId maybe already used)" });
+    }
+    res.status(500).json({ success: false, error: "Failed to create card", detail: err.message });
   }
 });
 
-
-// 🔹 Update an existing card
-router.put("/cards/:id", async (req, res) => {
+/* ---------------------------
+   PUT /api/admin/cards/:id
+   Update card; keep mapping in sync: remove old mapping if productId changed
+   --------------------------- */
+router.put("/cards/:id", requireAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
-    const updated = await Card.findByIdAndUpdate(id, req.body, {
-      new: true,
-    });
-    if (!updated)
-      return res
-        .status(404)
-        .json({ success: false, error: "Card not found" });
-    res.json({ success: true, card: updated });
+    const id = req.params.id;
+    const data = safeCardFields(req.body);
+
+    const existing = await Card.findById(id);
+    if (!existing) return res.status(404).json({ success: false, error: "Card not found" });
+
+    const oldProductId = existing.productId ?? null;
+    const newProductId = typeof data.productId !== "undefined" ? data.productId : oldProductId;
+
+    // If productId changed and oldProductId existed, delete mapping pointing to old productId
+    if (oldProductId && newProductId !== oldProductId) {
+      try {
+        await ProductCardMap.deleteOne({ productId: oldProductId, cardId: existing._id });
+      } catch (delErr) {
+        console.warn("Failed to delete old ProductCardMap:", delErr && delErr.message ? delErr.message : delErr);
+      }
+    }
+
+    // Apply updates to card
+    Object.assign(existing, data);
+    await existing.save();
+
+    // If newProductId exists, upsert mapping
+    if (newProductId != null) {
+      await ProductCardMap.findOneAndUpdate(
+        { productId: newProductId },
+        { productId: newProductId, cardId: existing._id, title: existing.name, active: existing.active ?? true },
+        { upsert: true, new: true }
+      );
+    }
+
+    // If admin cleared productId (set to null), ensure mapping removed
+    if (typeof data.productId !== "undefined" && data.productId === null && oldProductId) {
+      try {
+        await ProductCardMap.deleteOne({ productId: oldProductId, cardId: existing._id });
+      } catch (e) {
+        console.warn("Failed to delete mapping after clearing productId:", e && e.message ? e.message : e);
+      }
+    }
+
+    res.json({ success: true, card: existing });
   } catch (err) {
-    console.error("Error updating card:", err);
-    res.status(500).json({ success: false, error: "Failed to update card" });
+    console.error("PUT /api/admin/cards/:id error:", err && err.stack ? err.stack : err);
+    res.status(500).json({ success: false, error: "Failed to update card", detail: err.message });
   }
 });
 
-// 🔹 Delete a card
-router.delete("/cards/:id", async (req, res) => {
+/* ---------------------------
+   DELETE /api/admin/cards/:id
+   Remove card and any mappings that reference it
+   --------------------------- */
+router.delete("/cards/:id", requireAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
-    const deleted = await Card.findByIdAndDelete(id);
-    if (!deleted)
-      return res
-        .status(404)
-        .json({ success: false, error: "Card not found" });
-    res.json({ success: true, message: "Card deleted successfully" });
+    const id = req.params.id;
+    const card = await Card.findByIdAndDelete(id);
+    if (!card) return res.status(404).json({ success: false, error: "Card not found" });
+
+    try {
+      await ProductCardMap.deleteMany({ cardId: card._id });
+    } catch (e) {
+      console.warn("Failed to delete ProductCardMap on card delete:", e && e.message ? e.message : e);
+    }
+
+    res.json({ success: true });
   } catch (err) {
-    console.error("Error deleting card:", err);
+    console.error("DELETE /api/admin/cards/:id error:", err && err.stack ? err.stack : err);
     res.status(500).json({ success: false, error: "Failed to delete card" });
   }
 });
